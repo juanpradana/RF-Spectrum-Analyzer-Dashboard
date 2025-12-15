@@ -1,0 +1,62 @@
+[
+  {
+    "name": "RRI Pro 1 Lampung",
+    "callsign": "RRI",
+    "frequency": 87.7,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Prambors FM Lampung",
+    "callsign": "Prambors",
+    "frequency": 88.5,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Suara Wajar FM",
+    "callsign": "Wajar FM",
+    "frequency": 89.5,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Gema FM",
+    "callsign": "Gema FM",
+    "frequency": 90.1,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Swara Gita FM",
+    "callsign": "Swara Gita",
+    "frequency": 90.8,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Citra FM",
+    "callsign": "Citra FM",
+    "frequency": 91.5,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Lampung FM",
+    "callsign": "Lampung FM",
+    "frequency": 92.3,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Suara Lampung",
+    "callsign": "Suara Lampung",
+    "frequency": 93.2,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Kencana FM",
+    "callsign": "Kencana FM",
+    "frequency": 94.0,
+    "location": "Bandar Lampung"
+  },
+  {
+    "name": "Radio Mustika FM",
+    "callsign": "Mustika FM",
+    "frequency": 95.5,
+    "location": "Bandar Lampung"
+  }
+]
