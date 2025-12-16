@@ -92,6 +92,7 @@ async def upload_file(
         analysis = Analysis(
             task_id=parsed_data['metadata'].get('Task ID', 'Unknown'),
             filename=file.filename,
+            file_path=file_path,
             location_lat=parsed_data['metadata'].get('Location (lat)'),
             location_lon=parsed_data['metadata'].get('Location (lon)'),
             start_time=parsed_data['metadata'].get('Start Time'),
@@ -148,12 +149,30 @@ def delete_analysis(
     auth: bool = Depends(verify_credentials)
 ):
     """
-    Delete a specific analysis by ID
+    Delete a specific analysis by ID and clean up associated files
     """
     analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
     
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    # Clean up uploaded CSV file
+    if analysis.file_path and os.path.exists(analysis.file_path):
+        try:
+            os.remove(analysis.file_path)
+        except Exception as e:
+            print(f"Warning: Could not delete file {analysis.file_path}: {e}")
+    
+    # Clean up report PDF and chart PNG files
+    if analysis.report_path and os.path.exists(analysis.report_path):
+        try:
+            os.remove(analysis.report_path)
+            # Also try to remove associated chart image
+            chart_path = analysis.report_path.replace('.pdf', '.png').replace('report_', 'chart_')
+            if os.path.exists(chart_path):
+                os.remove(chart_path)
+        except Exception as e:
+            print(f"Warning: Could not delete report files: {e}")
     
     db.delete(analysis)
     db.commit()
@@ -171,9 +190,31 @@ def delete_all_analyses(
     auth: bool = Depends(verify_credentials)
 ):
     """
-    Delete all analyses - requires authentication
+    Delete all analyses and clean up associated files - requires authentication
     """
-    count = db.query(Analysis).count()
+    analyses = db.query(Analysis).all()
+    count = len(analyses)
+    
+    # Clean up all associated files
+    for analysis in analyses:
+        # Clean up uploaded CSV file
+        if analysis.file_path and os.path.exists(analysis.file_path):
+            try:
+                os.remove(analysis.file_path)
+            except Exception as e:
+                print(f"Warning: Could not delete file {analysis.file_path}: {e}")
+        
+        # Clean up report PDF and chart PNG files
+        if analysis.report_path and os.path.exists(analysis.report_path):
+            try:
+                os.remove(analysis.report_path)
+                # Also try to remove associated chart image
+                chart_path = analysis.report_path.replace('.pdf', '.png').replace('report_', 'chart_')
+                if os.path.exists(chart_path):
+                    os.remove(chart_path)
+            except Exception as e:
+                print(f"Warning: Could not delete report files: {e}")
+    
     db.query(Analysis).delete()
     db.commit()
     
@@ -220,15 +261,10 @@ def get_auto_threshold(
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     try:
-        file_path = None
-        for filename in os.listdir(settings.UPLOAD_DIR):
-            if filename.endswith('.csv'):
-                full_path = os.path.join(settings.UPLOAD_DIR, filename)
-                file_path = full_path
-                break
-        
-        if not file_path or not os.path.exists(file_path):
+        if not analysis.file_path or not os.path.exists(analysis.file_path):
             raise HTTPException(status_code=404, detail="CSV file not found")
+        
+        file_path = analysis.file_path
         
         with open(file_path, 'rb') as f:
             content = f.read()
@@ -267,17 +303,10 @@ def analyze_spectrum(
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     try:
-        file_pattern = f"*{analysis.filename}"
-        file_path = None
-        
-        for filename in os.listdir(settings.UPLOAD_DIR):
-            if filename.endswith('.csv'):
-                full_path = os.path.join(settings.UPLOAD_DIR, filename)
-                file_path = full_path
-                break
-        
-        if not file_path or not os.path.exists(file_path):
+        if not analysis.file_path or not os.path.exists(analysis.file_path):
             raise HTTPException(status_code=404, detail="CSV file not found")
+        
+        file_path = analysis.file_path
         
         with open(file_path, 'rb') as f:
             content = f.read()
@@ -317,15 +346,10 @@ def generate_report(
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     try:
-        file_path = None
-        for filename in os.listdir(settings.UPLOAD_DIR):
-            if filename.endswith('.csv'):
-                full_path = os.path.join(settings.UPLOAD_DIR, filename)
-                file_path = full_path
-                break
-        
-        if not file_path or not os.path.exists(file_path):
+        if not analysis.file_path or not os.path.exists(analysis.file_path):
             raise HTTPException(status_code=404, detail="CSV file not found")
+        
+        file_path = analysis.file_path
         
         with open(file_path, 'rb') as f:
             content = f.read()
@@ -396,15 +420,10 @@ def get_channels(
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     try:
-        file_path = None
-        for filename in os.listdir(settings.UPLOAD_DIR):
-            if filename.endswith('.csv'):
-                full_path = os.path.join(settings.UPLOAD_DIR, filename)
-                file_path = full_path
-                break
-        
-        if not file_path or not os.path.exists(file_path):
+        if not analysis.file_path or not os.path.exists(analysis.file_path):
             raise HTTPException(status_code=404, detail="CSV file not found")
+        
+        file_path = analysis.file_path
         
         with open(file_path, 'rb') as f:
             content = f.read()

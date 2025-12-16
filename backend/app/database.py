@@ -18,6 +18,7 @@ class Analysis(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(String, index=True)
     filename = Column(String)
+    file_path = Column(String, nullable=True)
     upload_time = Column(DateTime, default=datetime.utcnow)
     location_lat = Column(Float)
     location_lon = Column(Float)
