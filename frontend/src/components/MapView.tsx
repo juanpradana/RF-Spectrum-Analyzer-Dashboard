@@ -11,16 +11,26 @@ interface StationMarker {
   isLicensed?: boolean
 }
 
+interface SelectedStation {
+  lat: number
+  lon: number
+  name: string
+  frequency: number
+  callsign?: string
+}
+
 interface MapViewProps {
   lat: number
   lon: number
   name: string
   stations?: StationMarker[]
+  selectedStation?: SelectedStation | null
 }
 
-export default function MapView({ lat, lon, name, stations = [] }: MapViewProps) {
+export default function MapView({ lat, lon, name, stations = [], selectedStation }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
+  const markersRef = useRef<Map<string, any>>(new Map())
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -73,13 +83,15 @@ export default function MapView({ lat, lon, name, stations = [] }: MapViewProps)
 
           stations.forEach((station) => {
             if (station.lat && station.lon) {
-              L.marker([station.lat, station.lon], { icon: stationIcon })
+              const marker = L.marker([station.lat, station.lon], { icon: stationIcon })
                 .addTo(map)
                 .bindPopup(`
                   <b>📻 ${station.name}</b><br/>
                   ${station.callsign ? `Callsign: ${station.callsign}<br/>` : ''}
                   ${station.frequency ? `Freq: ${station.frequency.toFixed(3)} MHz` : ''}
                 `)
+              const key = `${station.lat}-${station.lon}`
+              markersRef.current.set(key, marker)
             }
           })
 
@@ -109,6 +121,19 @@ export default function MapView({ lat, lon, name, stations = [] }: MapViewProps)
       }
     }
   }, [lat, lon, name, stations])
+
+  useEffect(() => {
+    if (selectedStation && mapInstanceRef.current) {
+      const map = mapInstanceRef.current
+      map.setView([selectedStation.lat, selectedStation.lon], 15, { animate: true })
+      
+      const key = `${selectedStation.lat}-${selectedStation.lon}`
+      const marker = markersRef.current.get(key)
+      if (marker) {
+        marker.openPopup()
+      }
+    }
+  }, [selectedStation])
 
   return <div ref={mapRef} className="w-full h-full" />
 }

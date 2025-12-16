@@ -13,6 +13,8 @@ interface MatchedChannel {
   station: {
     name: string
     callsign?: string
+    latitude?: number
+    longitude?: number
   } | null
 }
 
@@ -23,6 +25,7 @@ interface SpectrumChartProps {
   threshold?: number
   onFullscreen?: () => void
   fullscreen?: boolean
+  onPointClick?: (station: { lat: number; lon: number; name: string; frequency: number; callsign?: string }) => void
 }
 
 export default function SpectrumChart({ 
@@ -31,7 +34,8 @@ export default function SpectrumChart({
   matchedChannels = [],
   threshold,
   onFullscreen,
-  fullscreen = false
+  fullscreen = false,
+  onPointClick
 }: SpectrumChartProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -75,15 +79,10 @@ export default function SpectrumChart({
   const avgStrengths = data.map((ch: any) => ch.avg_field_strength)
   const maxStrengths = data.map((ch: any) => ch.max_field_strength)
 
-  const matchedFreqs = matchedChannels
-    .filter((ch) => ch.station)
-    .map((ch) => ch.frequency)
-  const matchedStrengths = matchedChannels
-    .filter((ch) => ch.station)
-    .map((ch) => ch.avg_field_strength)
-  const matchedLabels = matchedChannels
-    .filter((ch) => ch.station)
-    .map((ch) => `${ch.station?.name || 'Unknown'}<br>${ch.frequency.toFixed(3)} MHz`)
+  const licensedChannels = matchedChannels.filter((ch) => ch.station)
+  const matchedFreqs = licensedChannels.map((ch) => ch.frequency)
+  const matchedStrengths = licensedChannels.map((ch) => ch.avg_field_strength)
+  const matchedLabels = licensedChannels.map((ch) => `${ch.station?.name || 'Unknown'}<br>${ch.frequency.toFixed(3)} MHz`)
 
   const unmatchedFreqs = matchedChannels
     .filter((ch) => !ch.station)
@@ -193,6 +192,25 @@ export default function SpectrumChart({
       )}
       <Plot
         data={plotData}
+        // @ts-ignore - onClick is valid but not in types
+        onClick={(event: any) => {
+          if (event.points && event.points.length > 0 && onPointClick) {
+            const point = event.points[0]
+            if (point.curveNumber === 2) {
+              const idx = point.pointIndex
+              const channel = licensedChannels[idx]
+              if (channel?.station?.latitude && channel?.station?.longitude) {
+                onPointClick({
+                  lat: channel.station.latitude,
+                  lon: channel.station.longitude,
+                  name: channel.station.name,
+                  frequency: channel.frequency,
+                  callsign: channel.station.callsign
+                })
+              }
+            }
+          }
+        }}
         layout={{
           autosize: true,
           xaxis: {

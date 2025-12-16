@@ -91,6 +91,7 @@ export default function AnalysisPage() {
   const [autoThresholdInfo, setAutoThresholdInfo] = useState<any>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
   const [fullscreenMode, setFullscreenMode] = useState<'map' | 'chart' | 'table' | null>(null)
+  const [selectedStation, setSelectedStation] = useState<{ lat: number; lon: number; name: string; frequency: number; callsign?: string } | null>(null)
 
   useEffect(() => {
     loadAnalysis()
@@ -281,9 +282,15 @@ export default function AnalysisPage() {
                       isLicensed: true
                     })) || []
                   }
+                  selectedStation={selectedStation}
                 />
               </div>
-              {results?.occupied_list?.filter((s: any) => s.station?.latitude)?.length > 0 && (
+              {selectedStation && (
+                <p className="mt-2 text-xs text-blue-600 font-medium">
+                  📍 Menampilkan: {selectedStation.name} ({selectedStation.frequency.toFixed(3)} MHz)
+                </p>
+              )}
+              {!selectedStation && results?.occupied_list?.filter((s: any) => s.station?.latitude)?.length > 0 && (
                 <p className="mt-2 text-xs text-gray-500">
                   🟢 Titik hijau = Lokasi stasiun berizin yang terdeteksi
                 </p>
@@ -394,6 +401,7 @@ export default function AnalysisPage() {
                   matchedChannels={results.occupied_list}
                   threshold={results.threshold_used}
                   onFullscreen={() => setFullscreenMode('chart')}
+                  onPointClick={(station) => setSelectedStation(station)}
                 />
               </>
             )}
@@ -443,6 +451,7 @@ export default function AnalysisPage() {
                       isLicensed: true
                     })) || []
                   }
+                  selectedStation={selectedStation}
                 />
               </div>
             )}
@@ -454,6 +463,10 @@ export default function AnalysisPage() {
                   matchedChannels={results.occupied_list}
                   threshold={results.threshold_used}
                   fullscreen
+                  onPointClick={(station) => {
+                    setSelectedStation(station)
+                    setFullscreenMode('map')
+                  }}
                 />
               </div>
             )}
