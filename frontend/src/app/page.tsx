@@ -30,6 +30,10 @@ export default function Home() {
     loadAnalyses()
   }
 
+  const handleDeleteAnalysis = (id: number) => {
+    setAnalyses(analyses.filter((a: any) => a.id !== id))
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <header className="bg-white shadow-md">
@@ -96,7 +100,7 @@ export default function Home() {
                   <p className="mt-2 text-gray-600">Memuat data...</p>
                 </div>
               ) : (
-                <AnalysisList analyses={analyses} />
+                <AnalysisList analyses={analyses} onDelete={handleDeleteAnalysis} />
               )}
             </div>
           </div>

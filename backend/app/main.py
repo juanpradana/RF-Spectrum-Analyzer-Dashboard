@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 import pandas as pd
 import os
@@ -112,6 +113,38 @@ def get_analyses(db: Session = Depends(get_db)):
         "station_name": a.station_name,
         "bands_count": len(a.bands) if a.bands else 0
     } for a in analyses]
+
+@app.delete("/api/analyses/{analysis_id}")
+def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a specific analysis by ID
+    """
+    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    db.delete(analysis)
+    db.commit()
+    
+    return {
+        "message": "Analysis deleted successfully",
+        "deleted_id": analysis_id
+    }
+
+@app.delete("/api/analyses")
+def delete_all_analyses(db: Session = Depends(get_db)):
+    """
+    Delete all analyses
+    """
+    count = db.query(Analysis).count()
+    db.query(Analysis).delete()
+    db.commit()
+    
+    return {
+        "message": "All analyses deleted",
+        "deleted_count": count
+    }
 
 @app.get("/api/analyses/{analysis_id}")
 def get_analysis(analysis_id: int, db: Session = Depends(get_db)):
@@ -452,7 +485,10 @@ def get_licenses(
             "city": s.city,
             "latitude": s.latitude,
             "longitude": s.longitude,
-            "status_simf": s.status_simf
+            "status_simf": s.status_simf,
+            "eq_mfr": s.eq_mfr,
+            "eq_mdl": s.eq_mdl,
+            "emis_class_1": s.emis_class_1
         } for s in stations]
     }
 
@@ -465,14 +501,14 @@ def get_license_stats(db: Session = Depends(get_db)):
     
     services = db.query(
         LicensedStation.service,
-        db.func.count(LicensedStation.id)
+        func.count(LicensedStation.id)
     ).group_by(LicensedStation.service).all()
     
     provinces = db.query(
         LicensedStation.province,
-        db.func.count(LicensedStation.id)
+        func.count(LicensedStation.id)
     ).group_by(LicensedStation.province).order_by(
-        db.func.count(LicensedStation.id).desc()
+        func.count(LicensedStation.id).desc()
     ).limit(10).all()
     
     return {

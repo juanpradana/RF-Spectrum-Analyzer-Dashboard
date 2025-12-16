@@ -194,8 +194,24 @@ export default function AnalysisPage() {
                   lat={analysis.location.lat}
                   lon={analysis.location.lon}
                   name={analysis.metadata['Station Name']}
+                  stations={results?.occupied_list
+                    ?.filter((s: any) => s.station?.latitude && s.station?.longitude)
+                    ?.map((s: any) => ({
+                      lat: s.station.latitude,
+                      lon: s.station.longitude,
+                      name: s.station.name,
+                      frequency: s.frequency,
+                      callsign: s.station.callsign,
+                      isLicensed: true
+                    })) || []
+                  }
                 />
               </div>
+              {results?.occupied_list?.filter((s: any) => s.station?.latitude)?.length > 0 && (
+                <p className="mt-2 text-xs text-gray-500">
+                  🟢 Titik hijau = Lokasi stasiun berizin yang terdeteksi
+                </p>
+              )}
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6">
@@ -292,7 +308,12 @@ export default function AnalysisPage() {
             {results && (
               <>
                 <AnalysisResults results={results} />
-                <SpectrumChart analysisId={id} bandNumber={selectedBand} />
+                <SpectrumChart 
+                  analysisId={id} 
+                  bandNumber={selectedBand}
+                  matchedChannels={results.occupied_list}
+                  threshold={results.threshold_used}
+                />
               </>
             )}
             {!results && (

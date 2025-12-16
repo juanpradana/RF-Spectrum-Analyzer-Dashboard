@@ -52,6 +52,9 @@ class LicensedStation(Base):
     status_simf = Column(String)
     licence_date = Column(String)
     validity_date = Column(String)
+    eq_mfr = Column(String, nullable=True)
+    eq_mdl = Column(String, nullable=True)
+    emis_class_1 = Column(String, nullable=True)
     upload_time = Column(DateTime, default=datetime.utcnow)
     source_file = Column(String)
 

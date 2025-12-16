@@ -2,13 +2,23 @@
 
 import { useEffect, useRef } from 'react'
 
+interface StationMarker {
+  lat: number
+  lon: number
+  name: string
+  frequency?: number
+  callsign?: string
+  isLicensed?: boolean
+}
+
 interface MapViewProps {
   lat: number
   lon: number
   name: string
+  stations?: StationMarker[]
 }
 
-export default function MapView({ lat, lon, name }: MapViewProps) {
+export default function MapView({ lat, lon, name, stations = [] }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
 
@@ -30,7 +40,7 @@ export default function MapView({ lat, lon, name }: MapViewProps) {
           attribution: '© OpenStreetMap contributors',
         }).addTo(map)
 
-        const icon = L.icon({
+        const measurementIcon = L.icon({
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
           iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -40,10 +50,51 @@ export default function MapView({ lat, lon, name }: MapViewProps) {
           shadowSize: [41, 41],
         })
 
-        L.marker([lat, lon], { icon })
+        L.marker([lat, lon], { icon: measurementIcon })
           .addTo(map)
-          .bindPopup(name)
+          .bindPopup(`<b>📍 Lokasi Pengukuran</b><br/>${name}`)
           .openPopup()
+
+        if (stations && stations.length > 0) {
+          const stationIcon = L.divIcon({
+            className: 'custom-station-marker',
+            html: `<div style="
+              background-color: #10b981;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 2px solid white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            "></div>`,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6],
+            popupAnchor: [0, -6],
+          })
+
+          stations.forEach((station) => {
+            if (station.lat && station.lon) {
+              L.marker([station.lat, station.lon], { icon: stationIcon })
+                .addTo(map)
+                .bindPopup(`
+                  <b>📻 ${station.name}</b><br/>
+                  ${station.callsign ? `Callsign: ${station.callsign}<br/>` : ''}
+                  ${station.frequency ? `Freq: ${station.frequency.toFixed(3)} MHz` : ''}
+                `)
+            }
+          })
+
+          const allPoints: [number, number][] = [[lat, lon]]
+          stations.forEach((s) => {
+            if (s.lat && s.lon) {
+              allPoints.push([s.lat, s.lon])
+            }
+          })
+          
+          if (allPoints.length > 1) {
+            const bounds = L.latLngBounds(allPoints)
+            map.fitBounds(bounds, { padding: [30, 30] })
+          }
+        }
 
         mapInstanceRef.current = map
       }
@@ -57,7 +108,7 @@ export default function MapView({ lat, lon, name }: MapViewProps) {
         mapInstanceRef.current = null
       }
     }
-  }, [lat, lon, name])
+  }, [lat, lon, name, stations])
 
   return <div ref={mapRef} className="w-full h-full" />
 }

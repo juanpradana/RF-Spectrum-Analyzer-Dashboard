@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Dict, List
 from datetime import datetime
+from io import BytesIO
 
 class LicenseParser:
     def __init__(self, file_content: bytes, filename: str):
@@ -13,7 +14,7 @@ class LicenseParser:
         Returns list of license records
         """
         try:
-            df = pd.read_excel(self.file_content, engine='openpyxl')
+            df = pd.read_excel(BytesIO(self.file_content), engine='openpyxl')
             
             licenses = []
             
@@ -58,6 +59,9 @@ class LicenseParser:
                         'status_simf': str(row.get('STATUS_SIMF', '')),
                         'licence_date': str(row.get('LICENCE_DATE', '')),
                         'validity_date': str(row.get('VALIDITY_DATE', '')),
+                        'eq_mfr': str(row.get('EQ_MFR', '')) if pd.notna(row.get('EQ_MFR')) else None,
+                        'eq_mdl': str(row.get('EQ_MDL', '')) if pd.notna(row.get('EQ_MDL')) else None,
+                        'emis_class_1': str(row.get('EMIS_CLASS_1', '')) if pd.notna(row.get('EMIS_CLASS_1')) else None,
                         'source_file': self.filename
                     }
                     

@@ -96,4 +96,14 @@ export const downloadReport = (filename: string) => {
   return `${API_URL}/api/reports/${filename}`
 }
 
+export const deleteAnalysis = async (id: number) => {
+  const response = await api.delete(`/api/analyses/${id}`)
+  return response.data
+}
+
+export const deleteAllAnalyses = async () => {
+  const response = await api.delete('/api/analyses')
+  return response.data
+}
+
 export default api

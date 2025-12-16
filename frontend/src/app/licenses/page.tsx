@@ -273,19 +273,21 @@ export default function LicensesPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Freq (MHz)</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Equipment</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Emission</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
                 ) : licenses.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                       No data available. Upload an Excel file to get started.
                     </td>
                   </tr>
@@ -298,6 +300,17 @@ export default function LicensesPage() {
                       <td className="px-4 py-3 text-sm text-gray-600">{license.service}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 font-mono">{license.freq?.toFixed(3)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{license.city}, {license.province}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {license.eq_mfr || license.eq_mdl ? (
+                          <div className="text-xs">
+                            {license.eq_mfr && <div>{license.eq_mfr}</div>}
+                            {license.eq_mdl && <div className="text-gray-400">{license.eq_mdl}</div>}
+                          </div>
+                        ) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-purple-600 font-mono">
+                        {license.emis_class_1 || '-'}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           license.status_simf === 'ACTIVE' 

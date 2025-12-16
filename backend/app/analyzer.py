@@ -27,10 +27,16 @@ class SpectrumAnalyzer:
                 for s in db_stations:
                     stations.append({
                         'name': s.stn_name or s.clnt_name,
+                        'clnt_name': s.clnt_name,
                         'callsign': s.callsign,
                         'frequency': s.freq,
                         'location': s.city or s.province,
                         'service': s.service,
+                        'latitude': s.latitude,
+                        'longitude': s.longitude,
+                        'eq_mfr': s.eq_mfr,
+                        'eq_mdl': s.eq_mdl,
+                        'emis_class_1': s.emis_class_1,
                         'licensed': True
                     })
                 
@@ -173,7 +179,13 @@ class SpectrumAnalyzer:
             if abs(station.get('frequency', 0) - frequency) < 0.1:
                 return {
                     'name': station.get('name', 'Unknown'),
+                    'clnt_name': station.get('clnt_name', ''),
                     'callsign': station.get('callsign', ''),
+                    'latitude': station.get('latitude'),
+                    'longitude': station.get('longitude'),
+                    'eq_mfr': station.get('eq_mfr', ''),
+                    'eq_mdl': station.get('eq_mdl', ''),
+                    'emis_class_1': station.get('emis_class_1', ''),
                     'licensed': True
                 }
         return None
