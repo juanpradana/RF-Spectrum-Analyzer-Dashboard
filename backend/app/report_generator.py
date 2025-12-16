@@ -1,8 +1,8 @@
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.lib.units import inch, cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak, KeepTogether
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from datetime import datetime
 import plotly.graph_objects as go
@@ -12,7 +12,15 @@ from typing import Dict, List
 class ReportGenerator:
     def __init__(self, output_path: str):
         self.output_path = output_path
-        self.doc = SimpleDocTemplate(output_path, pagesize=A4)
+        self.doc = SimpleDocTemplate(
+            output_path, 
+            pagesize=A4,
+            leftMargin=1.5*cm,
+            rightMargin=1.5*cm,
+            topMargin=1.5*cm,
+            bottomMargin=1.5*cm
+        )
+        self.page_width = A4[0] - 3*cm  # Available width
         self.styles = getSampleStyleSheet()
         self.story = []
         self._setup_custom_styles()
@@ -21,19 +29,36 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Heading1'],
-            fontSize=18,
+            fontSize=16,
             textColor=colors.HexColor('#1a365d'),
-            spaceAfter=30,
-            alignment=TA_CENTER
+            spaceAfter=20,
+            alignment=TA_CENTER,
+            leading=20
         ))
         
         self.styles.add(ParagraphStyle(
             name='CustomHeading',
             parent=self.styles['Heading2'],
-            fontSize=14,
+            fontSize=12,
             textColor=colors.HexColor('#2c5282'),
-            spaceAfter=12,
-            spaceBefore=12
+            spaceAfter=10,
+            spaceBefore=15,
+            leading=14
+        ))
+        
+        self.styles.add(ParagraphStyle(
+            name='TableCell',
+            parent=self.styles['Normal'],
+            fontSize=8,
+            leading=10,
+            wordWrap='CJK'
+        ))
+        
+        self.styles.add(ParagraphStyle(
+            name='SmallText',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            leading=12
         ))
     
     def generate_report(self, metadata: Dict, analysis_results: Dict, chart_paths: List[str] = None):
@@ -81,20 +106,23 @@ class ReportGenerator:
             ['Operator:', metadata.get('Operator ID', 'N/A')]
         ]
         
-        table = Table(data, colWidths=[2*inch, 4*inch])
+        col1_width = 3*cm
+        col2_width = self.page_width - col1_width
+        table = Table(data, colWidths=[col1_width, col2_width])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e2e8f0')),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
         ]))
         
         self.story.append(table)
-        self.story.append(Spacer(1, 0.3*inch))
+        self.story.append(Spacer(1, 0.2*inch))
     
     def _add_analysis_summary(self, results: Dict):
         heading = Paragraph("Ringkasan Analisis", self.styles['CustomHeading'])
@@ -103,68 +131,88 @@ class ReportGenerator:
         band_info = results.get('band_info', {})
         band_text = f"Band {results.get('band_number', 'N/A')}: {band_info.get('start_freq', 'N/A')} - {band_info.get('stop_freq', 'N/A')} MHz"
         
+        # Count licensed vs unlicensed
+        occupied_list = results.get('occupied_list', [])
+        licensed_count = len([s for s in occupied_list if s.get('station')])
+        unlicensed_count = len(occupied_list) - licensed_count
+        
         data = [
             ['Band:', band_text],
             ['Total Channel:', str(results.get('total_channels', 0))],
             ['Threshold:', f"{results.get('threshold_used', 50)} dBµV/m"],
             ['Noise Floor:', f"{results.get('noise_floor', 0)} dBµV/m"],
-            ['Channel Terisi:', str(results.get('occupied_channels', 0))],
+            ['Channel Terisi:', f"{results.get('occupied_channels', 0)} ({licensed_count} berizin, {unlicensed_count} tidak berizin)"],
             ['Tingkat Okupansi:', f"{results.get('occupancy_percentage', 0)}%"]
         ]
         
-        table = Table(data, colWidths=[2*inch, 4*inch])
+        col1_width = 3*cm
+        col2_width = self.page_width - col1_width
+        table = Table(data, colWidths=[col1_width, col2_width])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e2e8f0')),
             ('BACKGROUND', (1, -1), (1, -1), colors.HexColor('#fef5e7')),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, -1), (1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
         ]))
         
         self.story.append(table)
-        self.story.append(Spacer(1, 0.3*inch))
+        self.story.append(Spacer(1, 0.2*inch))
     
     def _add_top_signals_table(self, results: Dict):
-        heading = Paragraph("20 Sinyal Terkuat", self.styles['CustomHeading'])
+        heading = Paragraph("Sinyal Terkuat (Top 20)", self.styles['CustomHeading'])
         self.story.append(heading)
         
         top_signals = results.get('top_signals', [])[:20]
         
-        data = [['No.', 'Frekuensi (MHz)', 'Rata-rata (dBµV/m)', 'Maksimum (dBµV/m)', 'Stasiun']]
+        # Calculate column widths proportionally
+        col_widths = [0.8*cm, 2.5*cm, 2*cm, 2*cm, 2*cm, self.page_width - 9.3*cm]
+        
+        data = [['No.', 'Frekuensi', 'Avg (dB)', 'Max (dB)', 'Status', 'Stasiun']]
         
         for i, signal in enumerate(top_signals, 1):
             station = signal.get('station')
             station_name = station.get('name', '-') if station else '-'
+            status = 'Berizin' if station else 'Tidak Berizin'
+            
+            # Truncate long station names
+            if len(station_name) > 25:
+                station_name = station_name[:22] + '...'
             
             data.append([
                 str(i),
                 f"{signal.get('frequency', 0):.3f}",
                 f"{signal.get('avg_field_strength', 0):.1f}",
                 f"{signal.get('max_field_strength', 0):.1f}",
+                status,
                 station_name
             ])
         
-        table = Table(data, colWidths=[0.5*inch, 1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        table = Table(data, colWidths=col_widths, repeatRows=1)
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5282')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (4, -1), 'CENTER'),
+            ('ALIGN', (5, 0), (5, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
         ]))
         
         self.story.append(table)
-        self.story.append(Spacer(1, 0.3*inch))
+        self.story.append(Spacer(1, 0.2*inch))
     
     def _add_charts(self, chart_paths: List[str]):
         heading = Paragraph("Visualisasi Data", self.styles['CustomHeading'])
@@ -182,45 +230,75 @@ class ReportGenerator:
     def _add_occupied_channels_table(self, results: Dict):
         occupied_list = results.get('occupied_list', [])
         
-        if len(occupied_list) > 20:
-            heading = Paragraph(f"Channel Terisi (Menampilkan 20 dari {len(occupied_list)})", self.styles['CustomHeading'])
-            self.story.append(heading)
-            occupied_list = occupied_list[:20]
-        elif len(occupied_list) > 0:
-            heading = Paragraph("Daftar Channel Terisi", self.styles['CustomHeading'])
-            self.story.append(heading)
-        else:
+        if len(occupied_list) == 0:
             return
         
-        data = [['No.', 'Frekuensi (MHz)', 'Kuat Sinyal (dBµV/m)', 'Stasiun']]
+        # Add page break before this section if there are many signals
+        if len(occupied_list) > 10:
+            self.story.append(PageBreak())
         
-        for i, channel in enumerate(occupied_list, 1):
+        total_count = len(occupied_list)
+        display_list = occupied_list[:30]  # Show max 30 in PDF
+        
+        if total_count > 30:
+            heading = Paragraph(f"Daftar Channel Terisi (30 dari {total_count})", self.styles['CustomHeading'])
+        else:
+            heading = Paragraph(f"Daftar Channel Terisi ({total_count})", self.styles['CustomHeading'])
+        self.story.append(heading)
+        
+        # Calculate column widths
+        col_widths = [0.8*cm, 2.2*cm, 1.8*cm, 1.8*cm, 2*cm, self.page_width - 8.6*cm]
+        
+        data = [['No.', 'Frekuensi', 'Avg (dB)', 'Max (dB)', 'Status', 'Stasiun / Client']]
+        
+        for i, channel in enumerate(display_list, 1):
             station = channel.get('station')
-            station_name = station.get('name', 'Tidak Teridentifikasi') if station else 'Tidak Teridentifikasi'
+            if station:
+                station_name = station.get('name', '-')
+                if len(station_name) > 30:
+                    station_name = station_name[:27] + '...'
+                status = 'Berizin'
+            else:
+                station_name = '-'
+                status = 'Tidak Berizin'
             
             data.append([
                 str(i),
                 f"{channel.get('frequency', 0):.3f}",
                 f"{channel.get('avg_field_strength', 0):.1f}",
+                f"{channel.get('max_field_strength', 0):.1f}",
+                status,
                 station_name
             ])
         
-        table = Table(data, colWidths=[0.5*inch, 1.8*inch, 2*inch, 2.2*inch])
+        table = Table(data, colWidths=col_widths, repeatRows=1)
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5282')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (4, -1), 'CENTER'),
+            ('ALIGN', (5, 0), (5, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
         ]))
         
         self.story.append(table)
-        self.story.append(Spacer(1, 0.3*inch))
+        
+        if total_count > 30:
+            note = Paragraph(
+                f"<i>Catatan: Menampilkan 30 dari {total_count} channel terisi. Lihat data lengkap di aplikasi.</i>",
+                self.styles['SmallText']
+            )
+            self.story.append(Spacer(1, 0.1*inch))
+            self.story.append(note)
+        
+        self.story.append(Spacer(1, 0.2*inch))
     
     def _add_anomalies_section(self, results: Dict):
         anomalies = results.get('anomalies', [])
@@ -244,6 +322,8 @@ class ReportGenerator:
         
         occupancy = results.get('occupancy_percentage', 0)
         anomalies = results.get('anomalies', [])
+        occupied_list = results.get('occupied_list', [])
+        unlicensed_count = len([s for s in occupied_list if not s.get('station')])
         
         recommendations = []
         
@@ -254,6 +334,9 @@ class ReportGenerator:
         else:
             recommendations.append("Tingkat okupansi rendah (<50%). Spektrum frekuensi masih tersedia untuk alokasi baru.")
         
+        if unlicensed_count > 0:
+            recommendations.append(f"Terdeteksi {unlicensed_count} sinyal tidak berizin. Perlu investigasi untuk identifikasi sumber sinyal.")
+        
         if len(anomalies) > 0:
             recommendations.append(f"Terdeteksi {len(anomalies)} anomali sinyal. Perlu investigasi lebih lanjut untuk memastikan kepatuhan regulasi.")
         
@@ -261,11 +344,11 @@ class ReportGenerator:
         recommendations.append("Pertimbangkan untuk melakukan pengukuran ulang pada waktu berbeda untuk validasi data.")
         
         for rec in recommendations:
-            para = Paragraph(f"• {rec}", self.styles['Normal'])
+            para = Paragraph(f"• {rec}", self.styles['SmallText'])
             self.story.append(para)
-            self.story.append(Spacer(1, 0.1*inch))
+            self.story.append(Spacer(1, 0.05*inch))
         
-        self.story.append(Spacer(1, 0.3*inch))
+        self.story.append(Spacer(1, 0.2*inch))
     
     def _add_footer(self):
         self.story.append(Spacer(1, 0.5*inch))

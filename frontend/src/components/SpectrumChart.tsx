@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { Maximize2 } from 'lucide-react'
 import { getChannels } from '@/lib/api'
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false })
@@ -20,13 +21,17 @@ interface SpectrumChartProps {
   bandNumber: number
   matchedChannels?: MatchedChannel[]
   threshold?: number
+  onFullscreen?: () => void
+  fullscreen?: boolean
 }
 
 export default function SpectrumChart({ 
   analysisId, 
   bandNumber, 
   matchedChannels = [],
-  threshold 
+  threshold,
+  onFullscreen,
+  fullscreen = false
 }: SpectrumChartProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -155,10 +160,21 @@ export default function SpectrumChart({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Grafik Spektrum
-      </h2>
+    <div className={`bg-white rounded-lg shadow-lg p-4 md:p-6 ${fullscreen ? 'shadow-none h-full flex flex-col' : ''}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base md:text-lg font-semibold text-gray-900">
+          Grafik Spektrum
+        </h2>
+        {!fullscreen && onFullscreen && (
+          <button
+            onClick={onFullscreen}
+            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Fullscreen"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       {threshold && (
         <div className="mb-2 flex items-center gap-4 text-sm">
           <span className="flex items-center gap-1">
@@ -203,7 +219,7 @@ export default function SpectrumChart({
           displayModeBar: true,
           displaylogo: false,
         }}
-        style={{ width: '100%', height: '450px' }}
+        style={{ width: '100%', height: fullscreen ? 'calc(100vh - 200px)' : '450px' }}
       />
     </div>
   )

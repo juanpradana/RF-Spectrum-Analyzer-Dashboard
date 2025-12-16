@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Download, MapPin, Clock, Radio } from 'lucide-react'
+import { ArrowLeft, Download, MapPin, Clock, Radio, Maximize2, X } from 'lucide-react'
 import Link from 'next/link'
 import { getAnalysis, analyzeSpectrum, generateReport, downloadReport, getAutoThreshold } from '@/lib/api'
 import SpectrumChart from '@/components/SpectrumChart'
@@ -25,6 +25,7 @@ export default function AnalysisPage() {
   const [marginDb, setMarginDb] = useState(10)
   const [autoThresholdInfo, setAutoThresholdInfo] = useState<any>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
+  const [fullscreenMode, setFullscreenMode] = useState<'map' | 'chart' | 'table' | null>(null)
 
   useEffect(() => {
     loadAnalysis()
@@ -185,11 +186,20 @@ export default function AnalysisPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Peta Lokasi
-              </h2>
-              <div className="h-64 rounded-lg overflow-hidden">
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Peta Lokasi
+                </h2>
+                <button
+                  onClick={() => setFullscreenMode('map')}
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Fullscreen"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="h-64 md:h-80 rounded-lg overflow-hidden">
                 <MapView
                   lat={analysis.location.lat}
                   lon={analysis.location.lon}
@@ -307,19 +317,23 @@ export default function AnalysisPage() {
           <div className="lg:col-span-2 space-y-6">
             {results && (
               <>
-                <AnalysisResults results={results} />
+                <AnalysisResults 
+                  results={results} 
+                  onFullscreen={() => setFullscreenMode('table')}
+                />
                 <SpectrumChart 
                   analysisId={id} 
                   bandNumber={selectedBand}
                   matchedChannels={results.occupied_list}
                   threshold={results.threshold_used}
+                  onFullscreen={() => setFullscreenMode('chart')}
                 />
               </>
             )}
             {!results && (
-              <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-                <Radio className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">
+              <div className="bg-white rounded-lg shadow-lg p-8 md:p-12 text-center">
+                <Radio className="h-12 w-12 md:h-16 md:w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-sm md:text-base">
                   Pilih band dan klik "Analisis Spektrum" untuk memulai
                 </p>
               </div>
@@ -327,6 +341,61 @@ export default function AnalysisPage() {
           </div>
         </div>
       </main>
+
+      {/* Fullscreen Modal */}
+      {fullscreenMode && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-2 md:p-4">
+          <div className="bg-white rounded-lg w-full h-full max-w-[98vw] max-h-[98vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-3 md:p-4 border-b bg-gray-50">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900">
+                {fullscreenMode === 'map' && 'Peta Lokasi'}
+                {fullscreenMode === 'chart' && 'Grafik Spektrum'}
+                {fullscreenMode === 'table' && 'Seluruh Sinyal Kuat'}
+              </h2>
+              <button
+                onClick={() => setFullscreenMode(null)}
+                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-2 md:p-4">
+              {fullscreenMode === 'map' && (
+                <div className="h-full min-h-[70vh]">
+                  <MapView
+                    lat={analysis.location.lat}
+                    lon={analysis.location.lon}
+                    name={analysis.metadata['Station Name']}
+                    stations={results?.occupied_list
+                      ?.filter((s: any) => s.station?.latitude && s.station?.longitude)
+                      ?.map((s: any) => ({
+                        lat: s.station.latitude,
+                        lon: s.station.longitude,
+                        name: s.station.name,
+                        frequency: s.frequency,
+                        callsign: s.station.callsign,
+                        isLicensed: true
+                      })) || []
+                    }
+                  />
+                </div>
+              )}
+              {fullscreenMode === 'chart' && results && (
+                <SpectrumChart 
+                  analysisId={id} 
+                  bandNumber={selectedBand}
+                  matchedChannels={results.occupied_list}
+                  threshold={results.threshold_used}
+                  fullscreen
+                />
+              )}
+              {fullscreenMode === 'table' && results && (
+                <AnalysisResults results={results} fullscreen />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
