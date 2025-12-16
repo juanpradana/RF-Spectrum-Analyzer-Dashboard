@@ -251,6 +251,7 @@ export default function AnalysisPage() {
               </div>
             </div>
 
+            {!fullscreenMode && (
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -288,6 +289,7 @@ export default function AnalysisPage() {
                 </p>
               )}
             </div>
+            )}
 
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -409,59 +411,57 @@ export default function AnalysisPage() {
 
       {/* Fullscreen Modal */}
       {fullscreenMode && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
-          <div className="bg-white w-full h-full flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 flex-shrink-0">
-              <h2 className="text-base md:text-lg font-semibold text-gray-900">
-                {fullscreenMode === 'map' && 'Peta Lokasi'}
-                {fullscreenMode === 'chart' && 'Grafik Spektrum'}
-                {fullscreenMode === 'table' && `Seluruh Sinyal Kuat (${results?.occupied_list?.length || 0})`}
-              </h2>
-              <button
-                onClick={() => setFullscreenMode(null)}
-                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              {fullscreenMode === 'map' && (
-                <div className="w-full h-full">
-                  <MapView
-                    lat={analysis.location.lat}
-                    lon={analysis.location.lon}
-                    name={analysis.metadata['Station Name']}
-                    stations={results?.occupied_list
-                      ?.filter((s: any) => s.station?.latitude && s.station?.longitude)
-                      ?.map((s: any) => ({
-                        lat: s.station.latitude,
-                        lon: s.station.longitude,
-                        name: s.station.name,
-                        frequency: s.frequency,
-                        callsign: s.station.callsign,
-                        isLicensed: true
-                      })) || []
-                    }
-                  />
-                </div>
-              )}
-              {fullscreenMode === 'chart' && results && (
-                <div className="h-full p-4 overflow-auto">
-                  <SpectrumChart 
-                    analysisId={id} 
-                    bandNumber={selectedBand}
-                    matchedChannels={results.occupied_list}
-                    threshold={results.threshold_used}
-                    fullscreen
-                  />
-                </div>
-              )}
-              {fullscreenMode === 'table' && results && (
-                <div className="h-full overflow-auto p-4">
-                  <FullscreenSignalsTable signals={results.occupied_list || []} />
-                </div>
-              )}
-            </div>
+        <div className="fixed inset-0 bg-white flex flex-col" style={{ zIndex: 9999 }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 flex-shrink-0">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900">
+              {fullscreenMode === 'map' && 'Peta Lokasi'}
+              {fullscreenMode === 'chart' && 'Grafik Spektrum'}
+              {fullscreenMode === 'table' && `Seluruh Sinyal Kuat (${results?.occupied_list?.length || 0})`}
+            </h2>
+            <button
+              onClick={() => setFullscreenMode(null)}
+              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {fullscreenMode === 'map' && (
+              <div className="w-full h-full">
+                <MapView
+                  lat={analysis.location.lat}
+                  lon={analysis.location.lon}
+                  name={analysis.metadata['Station Name']}
+                  stations={results?.occupied_list
+                    ?.filter((s: any) => s.station?.latitude && s.station?.longitude)
+                    ?.map((s: any) => ({
+                      lat: s.station.latitude,
+                      lon: s.station.longitude,
+                      name: s.station.name,
+                      frequency: s.frequency,
+                      callsign: s.station.callsign,
+                      isLicensed: true
+                    })) || []
+                  }
+                />
+              </div>
+            )}
+            {fullscreenMode === 'chart' && results && (
+              <div className="h-full p-4 overflow-auto">
+                <SpectrumChart 
+                  analysisId={id} 
+                  bandNumber={selectedBand}
+                  matchedChannels={results.occupied_list}
+                  threshold={results.threshold_used}
+                  fullscreen
+                />
+              </div>
+            )}
+            {fullscreenMode === 'table' && results && (
+              <div className="h-full overflow-auto">
+                <FullscreenSignalsTable signals={results.occupied_list || []} />
+              </div>
+            )}
           </div>
         </div>
       )}
