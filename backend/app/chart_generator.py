@@ -172,24 +172,27 @@ class ChartGenerator:
         licensed_count = len([s for s in occupied_list if s.get('station')])
         unlicensed_count = len(occupied_list) - licensed_count
         
+        # Get threshold info
+        threshold = results.get('threshold_used', 0)
+        
         stats_data = [
             ('Total Channels', results.get('total_channels', 0), ''),
             ('Channels Terisi', len(occupied_list), ''),
             ('Okupansi', results.get('occupancy_percentage', 0), '%'),
+            ('Threshold', threshold, ' dB'),
+            ('Noise Floor', results.get('noise_floor', 0), ' dB'),
             ('Berizin', licensed_count, ''),
             ('Tidak Berizin', unlicensed_count, ''),
-            ('Noise Floor', results.get('noise_floor', 0), ' dB'),
             ('Avg Signal', band_channels['avg_field_strength'].mean(), ' dB'),
             ('Max Signal', band_channels['max_field_strength'].max(), ' dB'),
-            ('Min Signal', band_channels['avg_field_strength'].min(), ' dB'),
             ('Std Dev', band_channels['avg_field_strength'].std(), ' dB')
         ]
         
         fig = make_subplots(
             rows=5, cols=2,
             specs=[[{"type": "indicator"}, {"type": "indicator"}]] * 5,
-            vertical_spacing=0.12,
-            horizontal_spacing=0.15
+            vertical_spacing=0.08,
+            horizontal_spacing=0.1
         )
         
         colors = ['#3182ce', '#38a169', '#d69e2e', '#48bb78', '#e53e3e', 

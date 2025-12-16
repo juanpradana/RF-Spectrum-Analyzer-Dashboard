@@ -204,6 +204,12 @@ class EnhancedReportGenerator:
         unlicensed_count = len(occupied_list) - licensed_count
         occupancy = results.get('occupancy_percentage', 0)
         
+        auto_info = results.get('auto_threshold_info')
+        threshold_text = f"<b>{results.get('threshold_used', 50):.1f} dBµV/m</b>"
+        
+        if auto_info and auto_info.get('is_auto'):
+            threshold_text += f" (Auto: Noise Floor {auto_info.get('noise_floor')} + {auto_info.get('margin_db')} dB)"
+            
         summary_text = f"""
         Analisis spektrum frekuensi radio telah dilakukan pada lokasi <b>{metadata.get('Station Name', 'N/A')}</b> 
         dengan koordinat {metadata.get('Location (lat)', 'N/A')}, {metadata.get('Location (lon)', 'N/A')}. 
@@ -216,7 +222,7 @@ class EnhancedReportGenerator:
         • Channel terisi: <b>{results.get('occupied_channels', 0)}</b> 
         ({licensed_count} berizin, {unlicensed_count} tidak berizin)<br/>
         • Noise floor: <b>{results.get('noise_floor', 0):.1f} dBµV/m</b><br/>
-        • Threshold yang digunakan: <b>{results.get('threshold_used', 50):.1f} dBµV/m</b>
+        • Threshold: {threshold_text}
         """
         
         para = Paragraph(summary_text, self.styles['SmallText'])
@@ -331,10 +337,16 @@ class EnhancedReportGenerator:
         licensed_count = len([s for s in occupied_list if s.get('station')])
         unlicensed_count = len(occupied_list) - licensed_count
         
+        auto_info = results.get('auto_threshold_info')
+        threshold_val = f"{results.get('threshold_used', 50):.1f} dBµV/m"
+        
+        if auto_info and auto_info.get('is_auto'):
+             threshold_val += f" (Auto: NF {auto_info.get('noise_floor')} + {auto_info.get('margin_db')} dB)"
+        
         data = [
             ['Band Frekuensi:', band_text],
             ['Total Channel:', str(results.get('total_channels', 0))],
-            ['Threshold:', f"{results.get('threshold_used', 50):.1f} dBµV/m"],
+            ['Threshold:', threshold_val],
             ['Noise Floor:', f"{results.get('noise_floor', 0):.1f} dBµV/m"],
             ['Channel Terisi:', f"{results.get('occupied_channels', 0)}"],
             ['  - Berizin:', f"{licensed_count}"],

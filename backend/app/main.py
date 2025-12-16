@@ -352,6 +352,8 @@ def generate_report(
     analysis_id: int,
     band_number: int = Form(1),
     threshold: float = Form(50.0),
+    use_auto_threshold: bool = Form(False),
+    margin_db: float = Form(10.0),
     db: Session = Depends(get_db)
 ):
     analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
@@ -380,7 +382,7 @@ def generate_report(
             db
         )
         
-        results = analyzer.analyze_band(band_number, threshold)
+        results = analyzer.analyze_band(band_number, threshold, use_auto_threshold, margin_db)
         
         report_filename = f"report_{analysis.task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         report_path = os.path.join(settings.REPORTS_DIR, report_filename)
