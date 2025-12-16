@@ -322,12 +322,12 @@ sudo apt install ./google-chrome-stable_current_amd64.deb -y
 rm google-chrome-stable_current_amd64.deb
 
 # Install ChromeDriver for Chrome 115+ (uses Chrome for Testing endpoints)
-CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
-echo "Chrome major version: $CHROME_VERSION"
+# Get the exact Chrome version
+CHROME_FULL_VERSION=$(google-chrome --version | awk '{print $3}')
+echo "Chrome version: $CHROME_FULL_VERSION"
 
-# Download ChromeDriver from Chrome for Testing
-wget -O chromedriver-linux64.zip "https://edgedl.me.goog/edgedl/chrome/chrome-for-testing/${CHROME_VERSION}.0.6778.204/linux64/chromedriver-linux64.zip" 2>/dev/null || \
-wget -O chromedriver-linux64.zip "https://storage.googleapis.com/chrome-for-testing-public/143.0.6778.204/linux64/chromedriver-linux64.zip"
+# For Chrome 143.x, use ChromeDriver 143.0.7499.42
+wget -O chromedriver-linux64.zip "https://storage.googleapis.com/chrome-for-testing-public/143.0.7499.42/linux64/chromedriver-linux64.zip"
 
 unzip -o chromedriver-linux64.zip
 sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
