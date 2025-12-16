@@ -288,64 +288,236 @@ SECRET_KEY=your-very-long-random-secret-key-here
 
 ## 🚢 Deployment
 
-### Backend (Render/Heroku)
+### Deployment ke VPS (Production Ready)
 
+#### 1. Infrastruktur yang Dibutuhkan
+- VPS (Ubuntu 22.04/20.04)
+- Domain/subdomain: `rf-spektrum-analyzer.farzani.space`
+- Python 3.11+, Node.js 18+, SQLite (local file)
+- Reverse proxy (Nginx) + Let's Encrypt untuk HTTPS
+
+#### 2. DNS Configuration
+1. Masuk panel DNS domain
+2. Tambahkan record:
+   - **Type**: `A`
+   - **Host**: `rf-spektrum-analyzer`
+   - **Value**: `IP VPS`
+   - **TTL**: 5 menit
+3. Tunggu propagasi (biasanya < 15 menit)
+
+#### 3. Backend Deployment (FastAPI + Uvicorn + Nginx)
+
+**3.1 Setup Server**
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3.11 python3.11-venv python3-pip nginx certbot python3-certbot-nginx git unzip -y
+```
+
+**3.2 Clone & Install**
+```bash
+cd /var/www
+sudo git clone https://github.com/juanpradana/RF-Spectrum-Analyzer-Dashboard.git rf-spectrum
+cd rf-spectrum/backend
+python3.11 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**3.3 Konfigurasi .env**
+```bash
+cp .env.example .env
+nano .env
+```
+
+Set konfigurasi:
+```env
+DATABASE_URL=sqlite:////var/www/rf-spectrum/backend/rf_analyzer.db
+UPLOAD_DIR=/var/www/rf-spectrum/backend/uploads
+REPORTS_DIR=/var/www/rf-spectrum/backend/reports
+SECRET_KEY=generate_random_32_chars
+AUTH_USERNAME=admin
+AUTH_PASSWORD=strong_password
+CORS_ORIGINS=https://rf-spektrum-analyzer.farzani.space
+ENABLE_AUTH=true
+RATE_LIMIT_PER_MINUTE=60
+MAX_UPLOAD_SIZE_MB=50
+```
+
+**3.4 Folder Permissions**
+```bash
+mkdir -p uploads reports
+sudo chown -R www-data:www-data /var/www/rf-spectrum/backend
+sudo chmod -R 755 /var/www/rf-spectrum/backend
+sudo chmod -R 775 /var/www/rf-spectrum/backend/uploads
+sudo chmod -R 775 /var/www/rf-spectrum/backend/reports
+```
+
+**3.5 Systemd Service**
+
+Buat file `/etc/systemd/system/rf-spectrum-backend.service`:
+```ini
+[Unit]
+Description=RF Spectrum Backend
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/rf-spectrum/backend
+Environment="PATH=/var/www/rf-spectrum/backend/venv/bin"
+ExecStart=/var/www/rf-spectrum/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8002
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable service:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now rf-spectrum-backend
+sudo systemctl status rf-spectrum-backend
+```
+
+**3.6 Nginx Reverse Proxy**
+
+Buat file `/etc/nginx/sites-available/rf-spectrum`:
+```nginx
+server {
+    listen 80;
+    server_name rf-spektrum-analyzer.farzani.space;
+    client_max_body_size 100M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+Enable & reload:
+```bash
+sudo ln -s /etc/nginx/sites-available/rf-spectrum /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+**3.7 HTTPS (Let's Encrypt)**
+```bash
+sudo certbot --nginx -d rf-spektrum-analyzer.farzani.space
+```
+Pilih redirect all HTTP to HTTPS.
+
+#### 4. Frontend Deployment (Next.js 14)
+
+**4.1 Build Static**
+```bash
+cd /var/www/rf-spectrum/frontend
+npm install
+cp .env.local.example .env.local
+# Edit .env.local: NEXT_PUBLIC_API_URL=https://rf-spektrum-analyzer.farzani.space
+npm run build
+```
+
+**4.2 Jalankan via PM2**
+```bash
+npm install -g pm2
+pm2 start npm --name rf-frontend -- start -- -p 3002
+pm2 save
+pm2 startup
+```
+
+**4.3 Nginx Frontend Proxy**
+
+Update `/etc/nginx/sites-available/rf-spectrum`:
+```nginx
+server {
+    listen 80;
+    server_name rf-spektrum-analyzer.farzani.space;
+    client_max_body_size 100M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8002/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+Reload Nginx dan jalankan certbot lagi:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d rf-spektrum-analyzer.farzani.space
+```
+
+#### 5. Security & Hardening
+
+**Firewall (UFW)**
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+```
+
+**Security Checklist**
+- ✅ Set `ENABLE_AUTH=true` di backend `.env`
+- ✅ Database dan folder uploads/reports punya permission `www-data`
+- ✅ Jadwalkan backup database (cron rsync)
+- ✅ Monitor logs:
+  ```bash
+  journalctl -u rf-spectrum-backend -f
+  tail -f /var/log/nginx/access.log
+  ```
+
+#### 6. Routine Deployment Updates
+
+```bash
+# SSH ke VPS
+ssh user@your-vps-ip
+
+# Update code
+cd /var/www/rf-spectrum
+sudo git pull
+
+# Update backend
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart rf-spectrum-backend
+
+# Update frontend
+cd ../frontend
+npm install
+npm run build
+pm2 reload rf-frontend
+```
+
+### Alternative: Cloud Platforms
+
+**Backend (Render/Heroku)**
 1. Push code ke Git repository
 2. Connect repository ke Render/Heroku
 3. Set environment variables
 4. Deploy
 
-### Frontend (Vercel)
-
+**Frontend (Vercel)**
 1. Push code ke Git repository
 2. Import project di Vercel
 3. Set `NEXT_PUBLIC_API_URL` ke URL backend
 4. Deploy
-
-### Self-Hosted
-
-1. Setup reverse proxy (Nginx/Apache)
-2. Configure SSL certificate
-3. Setup systemd services untuk auto-restart
-4. Configure firewall
-
-### Backend di VPS (systemd)
-
-1. Copy project ke `/var/www/rf-spectrum`
-2. Buat virtualenv dan install requirements
-3. Buat service file `/etc/systemd/system/rf-spectrum-backend.service`:
-   ```ini
-   [Unit]
-   Description=RF Spectrum Backend
-   After=network.target
-
-   [Service]
-   User=www-data
-   WorkingDirectory=/var/www/rf-spectrum/backend
-   Environment="PATH=/var/www/rf-spectrum/backend/venv/bin"
-   ExecStart=/var/www/rf-spectrum/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8002
-   Restart=always
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-4. Jalankan:
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now rf-spectrum-backend
-   sudo systemctl status rf-spectrum-backend
-   ```
-
-### Frontend di VPS (PM2)
-
-1. Masuk folder `frontend`, jalankan `npm install` dan `npm run build`
-2. Install PM2 global: `npm install -g pm2`
-3. Start Next.js production:
-   ```bash
-   pm2 start npm --name rf-frontend -- start -- -p 3002
-   pm2 save
-   ```
-4. Tambahkan reverse proxy Nginx ke `http://127.0.0.1:3002`
 
 ## 🐛 Troubleshooting
 
