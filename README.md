@@ -5,12 +5,14 @@ Dashboard web untuk analisis spektrum frekuensi radio - Balai Monitor Spektrum F
 ## 🎯 Fitur Utama
 
 - **Upload & Parsing CSV**: Upload file CSV dari spectrum analyzer dengan format khusus (separator `^`)
-- **Analisis Spektrum**: Perhitungan okupansi, noise floor, dan deteksi anomali
-- **Visualisasi Interaktif**: Grafik spektrum dengan Plotly.js
-- **Peta Lokasi**: Tampilan lokasi pengukuran dengan Leaflet/OpenStreetMap
+- **Analisis Spektrum**: Perhitungan okupansi, noise floor, deteksi peak, dan deteksi anomali
+- **Visualisasi Interaktif**: Grafik spektrum dengan Plotly.js, klik point untuk navigasi ke peta
+- **Peta Lokasi**: Tampilan lokasi pengukuran dan stasiun berizin dengan Leaflet/OpenStreetMap
+- **Fullscreen Mode**: Mode fullscreen untuk peta, grafik, dan tabel sinyal
 - **Laporan PDF**: Generate laporan profesional secara otomatis
 - **Multi-Band Support**: Analisis untuk berbagai band frekuensi (FM, VHF, UHF, dll)
-- **Database Stasiun**: Identifikasi stasiun berlisensi
+- **Database Stasiun**: Upload data lisensi dari file Excel (POSTEL format)
+- **Mobile Responsive**: Tampilan responsif untuk desktop dan mobile
 
 ## 🏗️ Arsitektur
 
@@ -105,11 +107,14 @@ RF-Spectrum-Analyzer-Dashboard/
 │   │   ├── database.py          # Database models & setup
 │   │   ├── parser.py            # CSV parser
 │   │   ├── analyzer.py          # Spectrum analysis engine
-│   │   ├── report_generator.py # PDF report generator
-│   │   └── licensed_stations.json # Database stasiun berlisensi
+│   │   ├── license_parser.py    # Excel license parser
+│   │   ├── report_generator.py  # PDF report generator
+│   │   └── licensed_stations.json # Fallback database stasiun
 │   ├── tests/
 │   │   ├── test_parser.py
 │   │   └── test_analyzer.py
+│   ├── uploads/                 # Uploaded CSV files
+│   ├── reports/                 # Generated PDF reports
 │   ├── requirements.txt
 │   ├── pytest.ini
 │   └── .env.example
@@ -118,16 +123,19 @@ RF-Spectrum-Analyzer-Dashboard/
 │   │   ├── app/
 │   │   │   ├── layout.tsx
 │   │   │   ├── page.tsx         # Home page
-│   │   │   └── analysis/[id]/page.tsx # Analysis detail page
+│   │   │   ├── analysis/[id]/page.tsx # Analysis detail page
+│   │   │   └── licenses/page.tsx # License management page
 │   │   ├── components/
 │   │   │   ├── FileUpload.tsx
 │   │   │   ├── AnalysisList.tsx
 │   │   │   ├── SpectrumChart.tsx
 │   │   │   ├── AnalysisResults.tsx
 │   │   │   └── MapView.tsx
-│   │   └── lib/
-│   │       ├── api.ts           # API client
-│   │       └── utils.ts         # Utility functions
+│   │   ├── lib/
+│   │   │   ├── api.ts           # API client
+│   │   │   └── utils.ts         # Utility functions
+│   │   └── types/
+│   │       └── modules.d.ts     # TypeScript declarations
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── tailwind.config.ts
@@ -157,18 +165,17 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ### Database Stasiun Berlisensi
 
-Edit file `backend/app/licensed_stations.json` untuk menambah/update data stasiun:
+Upload file Excel lisensi melalui halaman **Database Lisensi** (`/licenses`):
 
-```json
-[
-  {
-    "name": "RRI Pro 1 Lampung",
-    "callsign": "RRI",
-    "frequency": 87.7,
-    "location": "Bandar Lampung"
-  }
-]
-```
+1. Buka menu "Database Lisensi" di sidebar
+2. Klik "Upload File Excel"
+3. Pilih file Excel dengan format POSTEL (kolom: CLNT_ID, CLNT_NAME, SID_FREQ, SID_LAT, SID_LONG, CALLSIGN, EQ_MFR, EQ_MDL, EMIS_CLASS_1)
+4. Data akan otomatis di-parse dan disimpan ke database
+
+**Format Excel yang didukung:**
+- File `.xlsx` dengan header kolom standar POSTEL
+- Koordinat dalam format desimal (latitude/longitude)
+- Frekuensi dalam MHz
 
 ## 📊 Format File CSV
 
@@ -298,6 +305,17 @@ Internal use - Balai Monitor Spektrum Frekuensi Radio Kelas II Lampung
 Untuk pertanyaan atau issue, hubungi tim IT Balai Monitor SFR Lampung.
 
 ## 🔄 Changelog
+
+### Version 1.1.0 (2025-12-16)
+- **Click-to-Map Navigation**: Klik point pada grafik untuk navigasi ke lokasi di peta
+- **Fullscreen Mode**: Mode fullscreen untuk peta, grafik, dan tabel sinyal
+- **Mobile Responsive**: Tampilan responsif untuk semua ukuran layar
+- **Peak Detection**: Algoritma deteksi peak yang lebih akurat
+- **Auto Threshold**: Perhitungan threshold otomatis berdasarkan noise floor
+- **Excel License Upload**: Upload data lisensi dari file Excel POSTEL
+- **Enhanced PDF Report**: Laporan PDF yang lebih rapi dan lengkap
+- **Station Markers**: Tampilan marker stasiun berizin di peta
+- **Delete Analysis**: Fitur hapus analisis dari history
 
 ### Version 1.0.0 (2025-12-15)
 - Initial release
