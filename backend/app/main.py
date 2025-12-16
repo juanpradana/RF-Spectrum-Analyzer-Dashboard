@@ -19,6 +19,7 @@ from .parser import CSVParser
 from .license_parser import LicenseParser
 from .analyzer import SpectrumAnalyzer
 from .report_generator import ReportGenerator, create_chart_image
+from .enhanced_report_generator import EnhancedReportGenerator
 from .security import verify_credentials, validate_file_size, sanitize_string, get_client_ip
 
 # Rate limiter setup
@@ -371,16 +372,11 @@ def generate_report(
         report_filename = f"report_{analysis.task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         report_path = os.path.join(settings.REPORTS_DIR, report_filename)
         
-        chart_filename = f"chart_{analysis.task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        chart_path = os.path.join(settings.REPORTS_DIR, chart_filename)
-        
-        create_chart_image(channels_df, results['band_info'], chart_path)
-        
-        generator = ReportGenerator(report_path)
+        generator = EnhancedReportGenerator(report_path)
         generator.generate_report(
             parsed_data['metadata'],
             results,
-            [chart_path]
+            channels_df
         )
         
         analysis.report_path = report_path
