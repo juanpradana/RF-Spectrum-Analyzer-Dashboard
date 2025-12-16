@@ -172,40 +172,45 @@ class ChartGenerator:
         licensed_count = len([s for s in occupied_list if s.get('station')])
         unlicensed_count = len(occupied_list) - licensed_count
         
-        stats = {
-            'Total Channels': results.get('total_channels', 0),
-            'Channels Terisi': len(occupied_list),
-            'Okupansi': f"{results.get('occupancy_percentage', 0):.1f}%",
-            'Berizin': licensed_count,
-            'Tidak Berizin': unlicensed_count,
-            'Noise Floor': f"{results.get('noise_floor', 0):.1f} dB",
-            'Avg Signal': f"{band_channels['avg_field_strength'].mean():.1f} dB",
-            'Max Signal': f"{band_channels['max_field_strength'].max():.1f} dB",
-            'Min Signal': f"{band_channels['avg_field_strength'].min():.1f} dB",
-            'Std Dev': f"{band_channels['avg_field_strength'].std():.1f} dB"
-        }
+        stats_data = [
+            ('Total Channels', results.get('total_channels', 0), ''),
+            ('Channels Terisi', len(occupied_list), ''),
+            ('Okupansi', results.get('occupancy_percentage', 0), '%'),
+            ('Berizin', licensed_count, ''),
+            ('Tidak Berizin', unlicensed_count, ''),
+            ('Noise Floor', results.get('noise_floor', 0), ' dB'),
+            ('Avg Signal', band_channels['avg_field_strength'].mean(), ' dB'),
+            ('Max Signal', band_channels['max_field_strength'].max(), ' dB'),
+            ('Min Signal', band_channels['avg_field_strength'].min(), ' dB'),
+            ('Std Dev', band_channels['avg_field_strength'].std(), ' dB')
+        ]
         
         fig = make_subplots(
             rows=5, cols=2,
             specs=[[{"type": "indicator"}, {"type": "indicator"}]] * 5,
-            vertical_spacing=0.15,
-            horizontal_spacing=0.1
+            vertical_spacing=0.12,
+            horizontal_spacing=0.15
         )
         
         colors = ['#3182ce', '#38a169', '#d69e2e', '#48bb78', '#e53e3e', 
                  '#805ad5', '#dd6b20', '#319795', '#c53030', '#2c5282']
         
-        for idx, (key, value) in enumerate(stats.items()):
+        for idx, (label, value, suffix) in enumerate(stats_data):
             row = idx // 2 + 1
             col = idx % 2 + 1
             
             fig.add_trace(go.Indicator(
                 mode="number",
-                value=float(str(value).split()[0]) if any(c.isdigit() for c in str(value)) else 0,
-                title={"text": f"<b>{key}</b>", "font": {"size": 14}},
-                number={"suffix": "" if not any(c.isalpha() for c in str(value)) else f" {' '.join(str(value).split()[1:])}", 
-                       "font": {"size": 24, "color": colors[idx]}},
-                domain={'x': [0, 1], 'y': [0, 1]}
+                value=value,
+                title={
+                    "text": f"<b>{label}</b>",
+                    "font": {"size": 13}
+                },
+                number={
+                    "suffix": suffix,
+                    "font": {"size": 28, "color": colors[idx]},
+                    "valueformat": ".1f" if suffix else ".0f"
+                }
             ), row=row, col=col)
         
         fig.update_layout(
