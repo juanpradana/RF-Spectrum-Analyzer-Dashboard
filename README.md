@@ -311,6 +311,25 @@ SECRET_KEY=your-very-long-random-secret-key-here
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install python3.11 python3.11-venv python3-pip nginx certbot python3-certbot-nginx git unzip -y
+
+# Install Chrome for map generation (remove snap version if exists)
+sudo snap remove chromium 2>/dev/null || true
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb -y
+rm google-chrome-stable_current_amd64.deb
+
+# Install ChromeDriver (check version compatibility with Chrome)
+CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
+wget "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+unzip chromedriver_linux64.zip
+sudo mv chromedriver /usr/bin/chromedriver
+sudo chmod +x /usr/bin/chromedriver
+rm chromedriver_linux64.zip
+
+# Verify installation
+google-chrome --version
+chromedriver --version
 ```
 
 **3.2 Clone & Install**

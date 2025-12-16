@@ -136,7 +136,7 @@ class MapGenerator:
             import shutil
             import subprocess
             
-            chrome_binary = shutil.which('chromium-browser') or shutil.which('google-chrome') or '/usr/bin/chromium-browser'
+            chrome_binary = shutil.which('google-chrome') or shutil.which('chromium-browser') or '/usr/bin/google-chrome'
             chromedriver_path = shutil.which('chromedriver') or '/usr/bin/chromedriver'
             
             print(f"Using Chrome binary: {chrome_binary}")
@@ -153,12 +153,25 @@ class MapGenerator:
             chrome_options.add_argument('--disable-extensions')
             chrome_options.add_argument('--disable-software-rasterizer')
             chrome_options.add_argument('--disable-setuid-sandbox')
+            chrome_options.add_argument('--single-process')
+            chrome_options.add_argument('--disable-background-networking')
+            chrome_options.add_argument('--disable-default-apps')
+            chrome_options.add_argument('--disable-sync')
+            chrome_options.add_argument('--metrics-recording-only')
+            chrome_options.add_argument('--mute-audio')
+            chrome_options.add_argument('--no-first-run')
+            chrome_options.add_argument(f'--user-data-dir={self.output_dir}/chrome-temp')
             chrome_options.add_argument(f'--window-size={width},{height}')
             chrome_options.binary_location = chrome_binary
             
+            service_env = os.environ.copy()
+            service_env['SNAP_NAME'] = 'chromium'
+            service_env['SNAP_INSTANCE_NAME'] = 'chromium'
+            
             service = Service(
                 executable_path=chromedriver_path,
-                log_output=subprocess.STDOUT
+                log_output=subprocess.STDOUT,
+                env=service_env
             )
             
             driver = webdriver.Chrome(service=service, options=chrome_options)
