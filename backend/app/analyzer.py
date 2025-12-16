@@ -120,13 +120,13 @@ class SpectrumAnalyzer:
         if use_auto_threshold:
             threshold = noise_floor + margin_db
         
-        occupied_mask = band_channels['avg_field_strength'] > threshold
-        occupied_channels = band_channels[occupied_mask].copy()
+        # Detect true peaks using scipy find_peaks
+        peak_channels = self._detect_peaks(band_channels, threshold)
         
-        occupancy_percentage = (len(occupied_channels) / len(band_channels)) * 100
+        occupancy_percentage = (len(peak_channels) / len(band_channels)) * 100
         
         occupied_list = []
-        for _, row in occupied_channels.iterrows():
+        for _, row in peak_channels.iterrows():
             station_match = self._match_station(row['frequency'])
             occupied_list.append({
                 'channel_no': int(row['channel_no']),
@@ -157,7 +157,7 @@ class SpectrumAnalyzer:
             'band_info': band,
             'total_channels': len(band_channels),
             'occupancy_percentage': round(occupancy_percentage, 2),
-            'occupied_channels': len(occupied_channels),
+            'occupied_channels': len(peak_channels),
             'noise_floor': round(noise_floor, 2),
             'occupied_list': occupied_list,
             'top_signals': top_signals,
@@ -173,6 +173,108 @@ class SpectrumAnalyzer:
         
         lowest_signals = band_channels.nsmallest(lowest_10_percent, 'avg_field_strength')
         return float(lowest_signals['avg_field_strength'].median())
+    
+    def _detect_peaks(self, band_channels: pd.DataFrame, threshold: float, 
+                       prominence: float = 3.0, min_distance: int = 3) -> pd.DataFrame:
+        """
+        Detect true signal peaks using numpy-based peak detection.
+        Only returns actual peaks (local maxima) that are above the threshold.
+        Excludes valleys and non-peak points.
+        
+        Args:
+            band_channels: DataFrame with channel data
+            threshold: Minimum signal strength to consider
+            prominence: Minimum dB difference from surrounding valleys (default 3 dB)
+            min_distance: Minimum channels between peaks (default 3)
+        """
+        if len(band_channels) < 3:
+            return band_channels[band_channels['avg_field_strength'] > threshold]
+        
+        # Sort by frequency to ensure proper peak detection
+        sorted_channels = band_channels.sort_values('frequency').reset_index(drop=True)
+        signal_values = sorted_channels['avg_field_strength'].values
+        n = len(signal_values)
+        
+        # Find local maxima (points higher than both neighbors)
+        local_max_mask = np.zeros(n, dtype=bool)
+        for i in range(1, n - 1):
+            if signal_values[i] > signal_values[i-1] and signal_values[i] > signal_values[i+1]:
+                local_max_mask[i] = True
+        
+        # Also check edges if they're higher than their single neighbor
+        if n > 1:
+            if signal_values[0] > signal_values[1]:
+                local_max_mask[0] = True
+            if signal_values[-1] > signal_values[-2]:
+                local_max_mask[-1] = True
+        
+        # Get indices of local maxima
+        peak_indices = np.where(local_max_mask)[0]
+        
+        if len(peak_indices) == 0:
+            return pd.DataFrame(columns=band_channels.columns)
+        
+        # Filter by threshold
+        peak_indices = [i for i in peak_indices if signal_values[i] > threshold]
+        
+        if len(peak_indices) == 0:
+            return pd.DataFrame(columns=band_channels.columns)
+        
+        # Filter by prominence (peak must be X dB above surrounding valleys)
+        prominent_peaks = []
+        for idx in peak_indices:
+            # Find left valley
+            left_min = signal_values[idx]
+            for j in range(idx - 1, -1, -1):
+                if signal_values[j] < left_min:
+                    left_min = signal_values[j]
+                if signal_values[j] > signal_values[idx]:
+                    break
+            
+            # Find right valley
+            right_min = signal_values[idx]
+            for j in range(idx + 1, n):
+                if signal_values[j] < right_min:
+                    right_min = signal_values[j]
+                if signal_values[j] > signal_values[idx]:
+                    break
+            
+            # Calculate prominence (height above the higher of the two valleys)
+            valley_height = max(left_min, right_min)
+            peak_prominence = signal_values[idx] - valley_height
+            
+            if peak_prominence >= prominence:
+                prominent_peaks.append((idx, signal_values[idx], peak_prominence))
+        
+        if len(prominent_peaks) == 0:
+            return pd.DataFrame(columns=band_channels.columns)
+        
+        # Sort by signal strength descending
+        prominent_peaks.sort(key=lambda x: x[1], reverse=True)
+        
+        # Apply minimum distance filter (keep strongest peaks, remove nearby weaker ones)
+        final_peaks = []
+        for peak in prominent_peaks:
+            idx = peak[0]
+            # Check if too close to an already selected peak
+            too_close = False
+            for selected_idx in final_peaks:
+                if abs(idx - selected_idx) < min_distance:
+                    too_close = True
+                    break
+            if not too_close:
+                final_peaks.append(idx)
+        
+        if len(final_peaks) == 0:
+            return pd.DataFrame(columns=band_channels.columns)
+        
+        # Get the peak channels
+        peak_channels = sorted_channels.iloc[final_peaks].copy()
+        
+        # Sort by field strength descending
+        peak_channels = peak_channels.sort_values('avg_field_strength', ascending=False)
+        
+        return peak_channels
     
     def _match_station(self, frequency: float) -> Optional[Dict]:
         for station in self.licensed_stations:
