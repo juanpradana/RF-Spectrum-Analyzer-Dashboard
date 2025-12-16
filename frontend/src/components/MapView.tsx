@@ -41,11 +41,32 @@ export default function MapView({ lat, lon, name, stations = [], selectedStation
       await import('leaflet/dist/leaflet.css')
 
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
+        try {
+          mapInstanceRef.current.remove()
+          mapInstanceRef.current = null
+        } catch (e) {
+          console.warn('Error removing map instance:', e)
+        }
       }
 
       if (mapRef.current) {
-        const map = L.map(mapRef.current).setView([lat, lon], 13)
+        markersRef.current.clear()
+        
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        if (!mapRef.current) return
+        
+        const map = L.map(mapRef.current, {
+          preferCanvas: true,
+          fadeAnimation: false,
+          zoomAnimation: false
+        }).setView([lat, lon], 13)
+        
+        setTimeout(() => {
+          if (map && mapRef.current) {
+            map.invalidateSize()
+          }
+        }, 200)
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
@@ -124,8 +145,14 @@ export default function MapView({ lat, lon, name, stations = [], selectedStation
 
     return () => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
+        try {
+          markersRef.current.clear()
+          mapInstanceRef.current.off()
+          mapInstanceRef.current.remove()
+          mapInstanceRef.current = null
+        } catch (e) {
+          console.warn('Error during map cleanup:', e)
+        }
       }
     }
   }, [lat, lon, name, stations])
