@@ -168,11 +168,16 @@ class MapGenerator:
             service_env['SNAP_NAME'] = 'chromium'
             service_env['SNAP_INSTANCE_NAME'] = 'chromium'
             
+            import tempfile
+            log_path = os.path.join(tempfile.gettempdir(), 'chromedriver.log')
+            
             service = Service(
                 executable_path=chromedriver_path,
-                log_output=subprocess.STDOUT,
+                service_args=['--verbose', f'--log-path={log_path}'],
                 env=service_env
             )
+            
+            print(f"ChromeDriver log: {log_path}")
             
             driver = webdriver.Chrome(service=service, options=chrome_options)
             driver.get(f'file:///{os.path.abspath(html_path)}')
