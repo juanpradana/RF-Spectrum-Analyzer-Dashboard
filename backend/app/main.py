@@ -295,7 +295,8 @@ def get_auto_threshold(
         auto_threshold_info = analyzer.calculate_auto_threshold(band_number, margin_db)
         
         return auto_threshold_info
-        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error calculating auto threshold: {str(e)}")
 
@@ -340,8 +341,10 @@ def analyze_spectrum(
         db.commit()
         
         return results
-        
+    except HTTPException:
+        raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Error analyzing spectrum: {str(e)}")
 
 @app.post("/api/analyses/{analysis_id}/report")
@@ -397,8 +400,10 @@ def generate_report(
             "report_path": report_path,
             "filename": report_filename
         }
-        
+    except HTTPException:
+        raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
 
 @app.get("/api/reports/{filename}")
@@ -450,7 +455,8 @@ def get_channels(
             "channels": channels_df.to_dict('records'),
             "count": len(channels_df)
         }
-        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving channels: {str(e)}")
 
