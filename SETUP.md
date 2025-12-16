@@ -48,7 +48,7 @@ Frontend akan berjalan di: http://localhost:3002
 
 ## Testing dengan Sample Data
 
-1. Buka browser ke http://localhost:3000
+1. Buka browser ke http://localhost:3002
 2. Upload file CSV sample yang ada di root directory:
    - `Field Strength vs. Channel (Task 1924)_Bandar Lampung 30 Menit.csv`
 3. Setelah upload berhasil, klik pada analisis yang muncul
@@ -77,7 +77,7 @@ Expected response:
 
 ### Frontend Check
 
-Buka browser ke http://localhost:3000 - Anda harus melihat halaman upload dengan header "RF Spectrum Analyzer"
+Buka browser ke http://localhost:3002 - Anda harus melihat halaman upload dengan header "RF Spectrum Analyzer"
 
 ## Running Tests
 
