@@ -167,6 +167,7 @@ class MapGenerator:
             service_env = os.environ.copy()
             service_env['SNAP_NAME'] = 'chromium'
             service_env['SNAP_INSTANCE_NAME'] = 'chromium'
+            service_env['HOME'] = self.output_dir
             
             import tempfile
             log_path = os.path.join(tempfile.gettempdir(), 'chromedriver.log')
