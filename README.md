@@ -309,6 +309,44 @@ SECRET_KEY=your-very-long-random-secret-key-here
 3. Setup systemd services untuk auto-restart
 4. Configure firewall
 
+### Backend di VPS (systemd)
+
+1. Copy project ke `/var/www/rf-spectrum`
+2. Buat virtualenv dan install requirements
+3. Buat service file `/etc/systemd/system/rf-spectrum-backend.service`:
+   ```ini
+   [Unit]
+   Description=RF Spectrum Backend
+   After=network.target
+
+   [Service]
+   User=www-data
+   WorkingDirectory=/var/www/rf-spectrum/backend
+   Environment="PATH=/var/www/rf-spectrum/backend/venv/bin"
+   ExecStart=/var/www/rf-spectrum/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8002
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+4. Jalankan:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now rf-spectrum-backend
+   sudo systemctl status rf-spectrum-backend
+   ```
+
+### Frontend di VPS (PM2)
+
+1. Masuk folder `frontend`, jalankan `npm install` dan `npm run build`
+2. Install PM2 global: `npm install -g pm2`
+3. Start Next.js production:
+   ```bash
+   pm2 start npm --name rf-frontend -- start -- -p 3002
+   pm2 save
+   ```
+4. Tambahkan reverse proxy Nginx ke `http://127.0.0.1:3002`
+
 ## 🐛 Troubleshooting
 
 ### Backend tidak bisa start
