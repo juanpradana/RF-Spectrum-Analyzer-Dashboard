@@ -253,7 +253,7 @@ export default function AnalysisPage() {
             </div>
 
             {!fullscreenMode && (
-            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+            <div id="map-section" className="bg-white rounded-lg shadow-lg p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">
                   Peta Lokasi
@@ -401,7 +401,13 @@ export default function AnalysisPage() {
                   matchedChannels={results.occupied_list}
                   threshold={results.threshold_used}
                   onFullscreen={() => setFullscreenMode('chart')}
-                  onPointClick={(station) => setSelectedStation(station)}
+                  onPointClick={(station) => {
+                    setSelectedStation(station)
+                    // Scroll to map section
+                    setTimeout(() => {
+                      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }, 100)
+                  }}
                 />
               </>
             )}

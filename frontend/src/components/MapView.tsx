@@ -31,6 +31,7 @@ export default function MapView({ lat, lon, name, stations = [], selectedStation
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
+  const pendingSelectedStation = useRef<SelectedStation | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -109,6 +110,13 @@ export default function MapView({ lat, lon, name, stations = [], selectedStation
         }
 
         mapInstanceRef.current = map
+        
+        // Check if there's a pending selected station or initial selectedStation prop to show
+        const stationToShow = pendingSelectedStation.current || selectedStation
+        if (stationToShow) {
+          showSelectedStationOnMap(L, map, stationToShow)
+          pendingSelectedStation.current = null
+        }
       }
     }
 
@@ -122,17 +130,67 @@ export default function MapView({ lat, lon, name, stations = [], selectedStation
     }
   }, [lat, lon, name, stations])
 
+  const showSelectedStationOnMap = async (L: any, map: any, station: SelectedStation) => {
+    
+    // Remove previous selected marker if exists
+    if ((map as any)._selectedMarker) {
+      map.removeLayer((map as any)._selectedMarker)
+    }
+    
+    // Create highlighted marker for selected station
+    const selectedIcon = L.divIcon({
+      className: 'selected-station-marker',
+      html: `<div style="
+        background-color: #ef4444;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 10px rgba(239,68,68,0.8), 0 2px 6px rgba(0,0,0,0.4);
+        animation: pulse 1s infinite;
+      "></div>
+      <style>
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+        }
+      </style>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -10],
+    })
+    
+    const marker = L.marker([station.lat, station.lon], { icon: selectedIcon })
+      .addTo(map)
+      .bindPopup(`
+        <b>📻 ${station.name}</b><br/>
+        ${station.callsign ? `Callsign: ${station.callsign}<br/>` : ''}
+        Freq: ${station.frequency.toFixed(3)} MHz
+      `)
+    
+    // Store reference to remove later
+    ;(map as any)._selectedMarker = marker
+    
+    // Pan to location and open popup
+    map.setView([station.lat, station.lon], 15, { animate: true })
+    setTimeout(() => {
+      marker.openPopup()
+    }, 400)
+  }
+
   useEffect(() => {
-    if (selectedStation && mapInstanceRef.current) {
-      const map = mapInstanceRef.current
-      map.setView([selectedStation.lat, selectedStation.lon], 15, { animate: true })
-      
-      const key = `${selectedStation.lat}-${selectedStation.lon}`
-      const marker = markersRef.current.get(key)
-      if (marker) {
-        marker.openPopup()
+    const handleSelectedStation = async () => {
+      if (selectedStation) {
+        if (mapInstanceRef.current) {
+          const L = (await import('leaflet')).default
+          showSelectedStationOnMap(L, mapInstanceRef.current, selectedStation)
+        } else {
+          pendingSelectedStation.current = selectedStation
+        }
       }
     }
+    
+    handleSelectedStation()
   }, [selectedStation])
 
   return <div ref={mapRef} className="w-full h-full" />
