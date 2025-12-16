@@ -364,7 +364,7 @@ After=network.target
 [Service]
 User=www-data
 WorkingDirectory=/var/www/rf-spectrum/backend
-Environment="PATH=/var/www/rf-spectrum/backend/venv/bin"
+Environment="PATH=/var/www/rf-spectrum/backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStart=/var/www/rf-spectrum/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8002
 Restart=always
 

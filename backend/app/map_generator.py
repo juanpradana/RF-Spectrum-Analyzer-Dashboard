@@ -133,6 +133,7 @@ class MapGenerator:
             from selenium.webdriver.chrome.options import Options
             from selenium.webdriver.chrome.service import Service
             import time
+            import shutil
             
             chrome_options = Options()
             chrome_options.add_argument('--headless')
@@ -144,7 +145,8 @@ class MapGenerator:
             chrome_options.add_argument('--allow-running-insecure-content')
             chrome_options.add_argument(f'--window-size={width},{height}')
             
-            service = Service(executable_path='/usr/bin/chromedriver')
+            chromedriver_path = shutil.which('chromedriver') or '/usr/bin/chromedriver'
+            service = Service(executable_path=chromedriver_path)
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
             driver.get(f'file:///{os.path.abspath(html_path)}')
