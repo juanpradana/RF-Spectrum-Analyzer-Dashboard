@@ -219,7 +219,7 @@ export default function SpectrumChart({
           displayModeBar: true,
           displaylogo: false,
         }}
-        style={{ width: '100%', height: fullscreen ? 'calc(100vh - 200px)' : '450px' }}
+        style={{ width: '100%', height: fullscreen ? 'calc(100vh - 200px)' : '550px' }}
       />
     </div>
   )

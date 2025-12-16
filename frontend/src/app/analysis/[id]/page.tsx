@@ -2,13 +2,78 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Download, MapPin, Clock, Radio, Maximize2, X } from 'lucide-react'
+import { ArrowLeft, Download, MapPin, Clock, Radio, Maximize2, X, CheckCircle, XCircle } from 'lucide-react'
 import Link from 'next/link'
 import { getAnalysis, analyzeSpectrum, generateReport, downloadReport, getAutoThreshold } from '@/lib/api'
 import SpectrumChart from '@/components/SpectrumChart'
 import AnalysisResults from '@/components/AnalysisResults'
 import MapView from '@/components/MapView'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatFrequency } from '@/lib/utils'
+
+function FullscreenSignalsTable({ signals }: { signals: any[] }) {
+  return (
+    <table className="min-w-full divide-y divide-gray-200 text-sm">
+      <thead className="bg-gray-50 sticky top-0">
+        <tr>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frekuensi (MHz)</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg (dBµV/m)</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max (dBµV/m)</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Stasiun / Client</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Callsign</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Perangkat</th>
+          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emisi</th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {signals.map((signal: any, idx: number) => (
+          <tr key={idx} className={`hover:bg-gray-50 ${signal.station ? 'bg-green-50/30' : 'bg-amber-50/30'}`}>
+            <td className="px-3 py-2 whitespace-nowrap text-gray-900">{idx + 1}</td>
+            <td className="px-3 py-2 whitespace-nowrap font-mono text-gray-900">{formatFrequency(signal.frequency)}</td>
+            <td className="px-3 py-2 whitespace-nowrap text-gray-900">{signal.avg_field_strength?.toFixed(1)}</td>
+            <td className="px-3 py-2 whitespace-nowrap text-gray-900">{signal.max_field_strength?.toFixed(1)}</td>
+            <td className="px-3 py-2 whitespace-nowrap">
+              {signal.station ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <CheckCircle className="h-3 w-3" />
+                  Berizin
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                  <XCircle className="h-3 w-3" />
+                  Tidak Berizin
+                </span>
+              )}
+            </td>
+            <td className="px-3 py-2 text-gray-600">
+              {signal.station ? (
+                <div>
+                  <div className="font-medium">{signal.station.name}</div>
+                  {signal.station.clnt_name && signal.station.clnt_name !== signal.station.name && (
+                    <div className="text-xs text-gray-400">{signal.station.clnt_name}</div>
+                  )}
+                </div>
+              ) : '-'}
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap text-gray-600">{signal.station?.callsign || '-'}</td>
+            <td className="px-3 py-2 text-gray-600">
+              {signal.station ? (
+                <div className="text-xs">
+                  {signal.station.eq_mfr && <div>{signal.station.eq_mfr}</div>}
+                  {signal.station.eq_mdl && <div className="text-gray-400">{signal.station.eq_mdl}</div>}
+                </div>
+              ) : '-'}
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap text-purple-600 text-xs">
+              {signal.station?.emis_class_1 || '-'}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
 
 export default function AnalysisPage() {
   const params = useParams()
@@ -149,7 +214,7 @@ export default function AnalysisPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-lg shadow-lg p-6">
@@ -199,7 +264,7 @@ export default function AnalysisPage() {
                   <Maximize2 className="h-4 w-4" />
                 </button>
               </div>
-              <div className="h-64 md:h-80 rounded-lg overflow-hidden">
+              <div className="h-72 md:h-96 lg:h-[400px] rounded-lg overflow-hidden">
                 <MapView
                   lat={analysis.location.lat}
                   lon={analysis.location.lon}
@@ -344,13 +409,13 @@ export default function AnalysisPage() {
 
       {/* Fullscreen Modal */}
       {fullscreenMode && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-2 md:p-4">
-          <div className="bg-white rounded-lg w-full h-full max-w-[98vw] max-h-[98vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between p-3 md:p-4 border-b bg-gray-50">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+          <div className="bg-white w-full h-full flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 flex-shrink-0">
               <h2 className="text-base md:text-lg font-semibold text-gray-900">
                 {fullscreenMode === 'map' && 'Peta Lokasi'}
                 {fullscreenMode === 'chart' && 'Grafik Spektrum'}
-                {fullscreenMode === 'table' && 'Seluruh Sinyal Kuat'}
+                {fullscreenMode === 'table' && `Seluruh Sinyal Kuat (${results?.occupied_list?.length || 0})`}
               </h2>
               <button
                 onClick={() => setFullscreenMode(null)}
@@ -359,9 +424,9 @@ export default function AnalysisPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-2 md:p-4">
+            <div className="flex-1 overflow-hidden">
               {fullscreenMode === 'map' && (
-                <div className="h-full min-h-[70vh]">
+                <div className="w-full h-full">
                   <MapView
                     lat={analysis.location.lat}
                     lon={analysis.location.lon}
@@ -381,16 +446,20 @@ export default function AnalysisPage() {
                 </div>
               )}
               {fullscreenMode === 'chart' && results && (
-                <SpectrumChart 
-                  analysisId={id} 
-                  bandNumber={selectedBand}
-                  matchedChannels={results.occupied_list}
-                  threshold={results.threshold_used}
-                  fullscreen
-                />
+                <div className="h-full p-4 overflow-auto">
+                  <SpectrumChart 
+                    analysisId={id} 
+                    bandNumber={selectedBand}
+                    matchedChannels={results.occupied_list}
+                    threshold={results.threshold_used}
+                    fullscreen
+                  />
+                </div>
               )}
               {fullscreenMode === 'table' && results && (
-                <AnalysisResults results={results} fullscreen />
+                <div className="h-full overflow-auto p-4">
+                  <FullscreenSignalsTable signals={results.occupied_list || []} />
+                </div>
               )}
             </div>
           </div>
