@@ -312,24 +312,31 @@ SECRET_KEY=your-very-long-random-secret-key-here
 sudo apt update && sudo apt upgrade -y
 sudo apt install python3.11 python3.11-venv python3-pip nginx certbot python3-certbot-nginx git unzip -y
 
-# Install Chrome for map generation (remove snap version if exists)
+# Install Chrome for map generation (remove snap versions if exist)
 sudo snap remove chromium 2>/dev/null || true
+sudo snap remove chromium-chromedriver 2>/dev/null || true
+sudo apt remove chromedriver -y 2>/dev/null || true
+
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo apt install ./google-chrome-stable_current_amd64.deb -y
 rm google-chrome-stable_current_amd64.deb
 
-# Install ChromeDriver (check version compatibility with Chrome)
-CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
-wget "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-unzip chromedriver_linux64.zip
-sudo mv chromedriver /usr/bin/chromedriver
-sudo chmod +x /usr/bin/chromedriver
-rm chromedriver_linux64.zip
+# Install ChromeDriver for Chrome 115+ (uses Chrome for Testing endpoints)
+CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
+echo "Chrome major version: $CHROME_VERSION"
+
+# Download ChromeDriver from Chrome for Testing
+wget -O chromedriver-linux64.zip "https://edgedl.me.goog/edgedl/chrome/chrome-for-testing/${CHROME_VERSION}.0.6778.204/linux64/chromedriver-linux64.zip" 2>/dev/null || \
+wget -O chromedriver-linux64.zip "https://storage.googleapis.com/chrome-for-testing-public/143.0.6778.204/linux64/chromedriver-linux64.zip"
+
+unzip -o chromedriver-linux64.zip
+sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+sudo chmod +x /usr/local/bin/chromedriver
+rm -rf chromedriver-linux64.zip chromedriver-linux64
 
 # Verify installation
 google-chrome --version
-chromedriver --version
+/usr/local/bin/chromedriver --version
 ```
 
 **3.2 Clone & Install**

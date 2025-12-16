@@ -137,7 +137,7 @@ class MapGenerator:
             import subprocess
             
             chrome_binary = shutil.which('google-chrome') or shutil.which('chromium-browser') or '/usr/bin/google-chrome'
-            chromedriver_path = shutil.which('chromedriver') or '/usr/bin/chromedriver'
+            chromedriver_path = '/usr/local/bin/chromedriver' if os.path.exists('/usr/local/bin/chromedriver') else (shutil.which('chromedriver') or '/usr/bin/chromedriver')
             
             print(f"Using Chrome binary: {chrome_binary}")
             print(f"Using ChromeDriver: {chromedriver_path}")
