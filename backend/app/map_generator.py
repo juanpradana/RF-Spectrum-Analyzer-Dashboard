@@ -134,24 +134,34 @@ class MapGenerator:
             from selenium.webdriver.chrome.service import Service
             import time
             import shutil
+            import subprocess
+            
+            chrome_binary = shutil.which('chromium-browser') or shutil.which('google-chrome') or '/usr/bin/chromium-browser'
+            chromedriver_path = shutil.which('chromedriver') or '/usr/bin/chromedriver'
+            
+            print(f"Using Chrome binary: {chrome_binary}")
+            print(f"Using ChromeDriver: {chromedriver_path}")
+            
+            result = subprocess.run([chrome_binary, '--version'], capture_output=True, text=True)
+            print(f"Chrome version: {result.stdout.strip()}")
             
             chrome_options = Options()
-            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--headless=new')
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--disable-web-security')
-            chrome_options.add_argument('--allow-running-insecure-content')
+            chrome_options.add_argument('--disable-software-rasterizer')
+            chrome_options.add_argument('--disable-setuid-sandbox')
             chrome_options.add_argument(f'--window-size={width},{height}')
-            
-            chrome_binary = shutil.which('chromium-browser') or shutil.which('google-chrome') or '/usr/bin/chromium-browser'
             chrome_options.binary_location = chrome_binary
             
-            chromedriver_path = shutil.which('chromedriver') or '/usr/bin/chromedriver'
-            service = Service(executable_path=chromedriver_path)
-            driver = webdriver.Chrome(service=service, options=chrome_options)
+            service = Service(
+                executable_path=chromedriver_path,
+                log_output=subprocess.STDOUT
+            )
             
+            driver = webdriver.Chrome(service=service, options=chrome_options)
             driver.get(f'file:///{os.path.abspath(html_path)}')
             time.sleep(2)
             
@@ -163,6 +173,8 @@ class MapGenerator:
             self._create_static_map_image(output_path, width, height)
         except Exception as e:
             print(f"Error converting map: {e}")
+            import traceback
+            traceback.print_exc()
             self._create_static_map_image(output_path, width, height)
     
     def _create_static_map_image(self, output_path: str, width: int = 1200, height: int = 800):
