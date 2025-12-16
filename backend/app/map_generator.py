@@ -144,7 +144,8 @@ class MapGenerator:
             chrome_options.add_argument('--allow-running-insecure-content')
             chrome_options.add_argument(f'--window-size={width},{height}')
             
-            driver = webdriver.Chrome(options=chrome_options)
+            service = Service(executable_path='/usr/bin/chromedriver')
+            driver = webdriver.Chrome(service=service, options=chrome_options)
             
             driver.get(f'file:///{os.path.abspath(html_path)}')
             time.sleep(2)
