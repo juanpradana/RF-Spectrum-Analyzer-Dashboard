@@ -152,52 +152,12 @@ def delete_analysis(
     """
     Delete a specific analysis by ID and clean up associated files
     """
-    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
-    
-    if not analysis:
-        raise HTTPException(status_code=404, detail="Analysis not found")
-    
-    # Clean up uploaded CSV file
-    if analysis.file_path and os.path.exists(analysis.file_path):
-        try:
-            os.remove(analysis.file_path)
-        except Exception as e:
-            print(f"Warning: Could not delete file {analysis.file_path}: {e}")
-    
-    # Clean up report PDF and chart PNG files
-    if analysis.report_path and os.path.exists(analysis.report_path):
-        try:
-            os.remove(analysis.report_path)
-            # Also try to remove associated chart image
-            chart_path = analysis.report_path.replace('.pdf', '.png').replace('report_', 'chart_')
-            if os.path.exists(chart_path):
-                os.remove(chart_path)
-        except Exception as e:
-            print(f"Warning: Could not delete report files: {e}")
-    
-    db.delete(analysis)
-    db.commit()
-    
-    return {
-        "message": "Analysis deleted successfully",
-        "deleted_id": analysis_id
-    }
-
-@app.delete("/api/analyses")
-@limiter.limit("5/minute")
-def delete_all_analyses(
-    request: Request,
-    db: Session = Depends(get_db),
-    auth: bool = Depends(verify_credentials)
-):
-    """
-    Delete all analyses and clean up associated files - requires authentication
-    """
-    analyses = db.query(Analysis).all()
-    count = len(analyses)
-    
-    # Clean up all associated files
-    for analysis in analyses:
+    try:
+        analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+        
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
         # Clean up uploaded CSV file
         if analysis.file_path and os.path.exists(analysis.file_path):
             try:
@@ -215,14 +175,64 @@ def delete_all_analyses(
                     os.remove(chart_path)
             except Exception as e:
                 print(f"Warning: Could not delete report files: {e}")
-    
-    db.query(Analysis).delete()
-    db.commit()
-    
-    return {
-        "message": "All analyses deleted",
-        "deleted_count": count
-    }
+        
+        db.delete(analysis)
+        db.commit()
+        
+        return {
+            "message": "Analysis deleted successfully",
+            "deleted_id": analysis_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting analysis: {str(e)}")
+
+@app.delete("/api/analyses")
+@limiter.limit("5/minute")
+def delete_all_analyses(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: bool = Depends(verify_credentials)
+):
+    """
+    Delete all analyses and clean up associated files - requires authentication
+    """
+    try:
+        analyses = db.query(Analysis).all()
+        count = len(analyses)
+        
+        # Clean up all associated files
+        for analysis in analyses:
+            # Clean up uploaded CSV file
+            if analysis.file_path and os.path.exists(analysis.file_path):
+                try:
+                    os.remove(analysis.file_path)
+                except Exception as e:
+                    print(f"Warning: Could not delete file {analysis.file_path}: {e}")
+            
+            # Clean up report PDF and chart PNG files
+            if analysis.report_path and os.path.exists(analysis.report_path):
+                try:
+                    os.remove(analysis.report_path)
+                    # Also try to remove associated chart image
+                    chart_path = analysis.report_path.replace('.pdf', '.png').replace('report_', 'chart_')
+                    if os.path.exists(chart_path):
+                        os.remove(chart_path)
+                except Exception as e:
+                    print(f"Warning: Could not delete report files: {e}")
+        
+        db.query(Analysis).delete()
+        db.commit()
+        
+        return {
+            "message": "All analyses deleted",
+            "deleted_count": count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting analyses: {str(e)}")
 
 @app.get("/api/analyses/{analysis_id}")
 def get_analysis(analysis_id: int, db: Session = Depends(get_db)):
@@ -584,14 +594,18 @@ def delete_all_licenses(
     """
     Delete all license data - requires authentication
     """
-    count = db.query(LicensedStation).count()
-    db.query(LicensedStation).delete()
-    db.commit()
-    
-    return {
-        "message": "All license data deleted",
-        "deleted_count": count
-    }
+    try:
+        count = db.query(LicensedStation).count()
+        db.query(LicensedStation).delete()
+        db.commit()
+        
+        return {
+            "message": "All license data deleted",
+            "deleted_count": count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting licenses: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

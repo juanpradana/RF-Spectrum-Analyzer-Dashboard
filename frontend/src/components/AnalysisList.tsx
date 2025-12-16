@@ -35,9 +35,10 @@ export default function AnalysisList({ analyses, onDelete }: AnalysisListProps) 
       if (onDelete) {
         onDelete(id)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting analysis:', error)
-      alert('Gagal menghapus analisis')
+      const errorMessage = error?.response?.data?.detail || 'Gagal menghapus analisis'
+      alert(`Error: ${errorMessage}`)
     }
   }
 
