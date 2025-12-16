@@ -242,11 +242,49 @@ npm test
 
 ## 🔒 Keamanan
 
-- Gunakan SECRET_KEY yang kuat di production
+### Fitur Keamanan Built-in
+
+1. **Rate Limiting** - Proteksi DDoS dengan pembatasan request per IP
+   - Upload: 10 request/menit
+   - Delete: 5-20 request/menit
+   - API umum: 60 request/menit
+
+2. **File Size Validation** - Batas ukuran file upload (default 50MB)
+
+3. **Input Sanitization** - Validasi dan sanitasi input untuk mencegah SQL injection
+
+4. **HTTP Basic Authentication** - Proteksi endpoint sensitif (upload, delete)
+
+5. **CORS Protection** - Pembatasan origin yang diizinkan
+
+### Konfigurasi Keamanan (.env)
+
+```env
+# Aktifkan autentikasi untuk production
+ENABLE_AUTH=true
+AUTH_USERNAME=admin
+AUTH_PASSWORD=your-strong-password-here
+
+# Rate limiting
+RATE_LIMIT_PER_MINUTE=60
+MAX_UPLOAD_SIZE_MB=50
+
+# CORS - batasi ke domain production
+CORS_ORIGINS=https://yourdomain.com
+
+# Secret key untuk JWT (gunakan random string panjang)
+SECRET_KEY=your-very-long-random-secret-key-here
+```
+
+### Best Practices Production
+
+- Set `ENABLE_AUTH=true` untuk mengaktifkan autentikasi
+- Gunakan SECRET_KEY yang kuat (min 32 karakter random)
 - Ubah AUTH_USERNAME dan AUTH_PASSWORD default
-- Batasi CORS_ORIGINS sesuai domain yang diizinkan
+- Batasi CORS_ORIGINS hanya ke domain yang diizinkan
 - Jangan expose database credentials
 - Gunakan HTTPS di production
+- Gunakan reverse proxy (Nginx) dengan rate limiting tambahan
 
 ## 🚢 Deployment
 

@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     AUTH_PASSWORD: str = "changeme123"
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
+    # Security settings
+    MAX_UPLOAD_SIZE_MB: int = 50
+    RATE_LIMIT_PER_MINUTE: int = 60
+    ENABLE_AUTH: bool = False  # Set to True in production
+    
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod
     def parse_cors_origins(cls, v):

@@ -1,6 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
@@ -9,21 +9,38 @@ import os
 import uuid
 from datetime import datetime
 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 from .config import settings
 from .database import get_db, init_db, Analysis, LicensedStation
 from .parser import CSVParser
 from .license_parser import LicenseParser
 from .analyzer import SpectrumAnalyzer
 from .report_generator import ReportGenerator, create_chart_image
+from .security import verify_credentials, validate_file_size, sanitize_string, get_client_ip
 
-app = FastAPI(title="RF Spectrum Analyzer API", version="1.0.0")
+# Rate limiter setup
+limiter = Limiter(key_func=get_remote_address)
+
+app = FastAPI(
+    title="RF Spectrum Analyzer API", 
+    version="1.1.0",
+    docs_url="/docs" if not settings.ENABLE_AUTH else None,
+    redoc_url="/redoc" if not settings.ENABLE_AUTH else None,
+)
+
+# Add rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 @app.on_event("startup")
@@ -31,23 +48,30 @@ def startup_event():
     init_db()
 
 @app.get("/")
-def read_root():
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+def read_root(request: Request):
     return {
         "message": "RF Spectrum Analyzer API",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "status": "running"
     }
 
 @app.post("/api/upload")
+@limiter.limit("10/minute")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth: bool = Depends(verify_credentials)
 ):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
     
     try:
         content = await file.read()
+        
+        # Validate file size
+        validate_file_size(content)
         
         parser = CSVParser(content)
         parsed_data = parser.parse()
@@ -98,7 +122,8 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 @app.get("/api/analyses")
-def get_analyses(db: Session = Depends(get_db)):
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+def get_analyses(request: Request, db: Session = Depends(get_db)):
     analyses = db.query(Analysis).order_by(Analysis.upload_time.desc()).limit(50).all()
     
     return [{
@@ -115,7 +140,13 @@ def get_analyses(db: Session = Depends(get_db)):
     } for a in analyses]
 
 @app.delete("/api/analyses/{analysis_id}")
-def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def delete_analysis(
+    request: Request,
+    analysis_id: int, 
+    db: Session = Depends(get_db),
+    auth: bool = Depends(verify_credentials)
+):
     """
     Delete a specific analysis by ID
     """
@@ -133,9 +164,14 @@ def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
     }
 
 @app.delete("/api/analyses")
-def delete_all_analyses(db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def delete_all_analyses(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: bool = Depends(verify_credentials)
+):
     """
-    Delete all analyses
+    Delete all analyses - requires authentication
     """
     count = db.query(Analysis).count()
     db.query(Analysis).delete()
@@ -394,19 +430,25 @@ def get_channels(
         raise HTTPException(status_code=500, detail=f"Error retrieving channels: {str(e)}")
 
 @app.post("/api/licenses/upload")
+@limiter.limit("10/minute")
 async def upload_license_file(
+    request: Request,
     file: UploadFile = File(...),
     replace_existing: bool = Form(False),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth: bool = Depends(verify_credentials)
 ):
     """
-    Upload Excel file containing license data
+    Upload Excel file containing license data - requires authentication
     """
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are allowed")
     
     try:
         content = await file.read()
+        
+        # Validate file size
+        validate_file_size(content)
         
         parser = LicenseParser(content, file.filename)
         licenses = parser.parse()
@@ -518,9 +560,14 @@ def get_license_stats(db: Session = Depends(get_db)):
     }
 
 @app.delete("/api/licenses")
-def delete_all_licenses(db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def delete_all_licenses(
+    request: Request,
+    db: Session = Depends(get_db),
+    auth: bool = Depends(verify_credentials)
+):
     """
-    Delete all license data
+    Delete all license data - requires authentication
     """
     count = db.query(LicensedStation).count()
     db.query(LicensedStation).delete()
