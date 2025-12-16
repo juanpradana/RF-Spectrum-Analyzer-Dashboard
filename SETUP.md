@@ -21,12 +21,12 @@ pip install -r requirements.txt
 copy .env.example .env
 
 # Run backend server
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
 ```
 
-Backend akan berjalan di: http://localhost:8000
+Backend akan berjalan di: http://localhost:8002
 
-API Documentation: http://localhost:8000/docs
+API Documentation: http://localhost:8002/docs
 
 ### 2. Frontend Setup
 
@@ -44,7 +44,7 @@ copy .env.local.example .env.local
 npm run dev
 ```
 
-Frontend akan berjalan di: http://localhost:3000
+Frontend akan berjalan di: http://localhost:3002
 
 ## Testing dengan Sample Data
 
@@ -63,7 +63,7 @@ Frontend akan berjalan di: http://localhost:3000
 ### Backend Health Check
 
 ```bash
-curl http://localhost:8000/
+curl http://localhost:8002/
 ```
 
 Expected response:
@@ -94,38 +94,38 @@ Expected: All tests should pass
 
 ```bash
 # Upload file
-curl -X POST http://localhost:8000/api/upload \
+curl -X POST http://localhost:8002/api/upload \
   -F "file=@../Field Strength vs. Channel (Task 1924)_Bandar Lampung 30 Menit.csv"
 
 # Get analyses list
-curl http://localhost:8000/api/analyses
+curl http://localhost:8002/api/analyses
 
 # Get specific analysis (replace {id} with actual ID)
-curl http://localhost:8000/api/analyses/{id}
+curl http://localhost:8002/api/analyses/{id}
 ```
 
 ## Troubleshooting
 
 ### Port Already in Use
 
-**Backend (Port 8000):**
+**Backend (Port 8002):**
 ```bash
 # Windows
-netstat -ano | findstr :8000
+netstat -ano | findstr :8002
 taskkill /PID <PID> /F
 
 # Linux/Mac
-lsof -ti:8000 | xargs kill -9
+lsof -ti:8002 | xargs kill -9
 ```
 
-**Frontend (Port 3000):**
+**Frontend (Port 3002):**
 ```bash
 # Windows
-netstat -ano | findstr :3000
+netstat -ano | findstr :3002
 taskkill /PID <PID> /F
 
 # Linux/Mac
-lsof -ti:3000 | xargs kill -9
+lsof -ti:3002 | xargs kill -9
 ```
 
 ### Python Dependencies Error
@@ -162,7 +162,7 @@ rm rf_analyzer.db
 
 Pastikan `CORS_ORIGINS` di backend/.env mencakup URL frontend:
 ```env
-CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+CORS_ORIGINS=http://localhost:3002,http://127.0.0.1:3002
 ```
 
 ## Production Deployment
@@ -191,7 +191,7 @@ NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 ```bash
 cd backend
 pip install -r requirements.txt
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8002
 ```
 
 **Frontend:**
@@ -230,5 +230,5 @@ npm start
 Jika mengalami masalah, check:
 1. Logs di terminal backend dan frontend
 2. Browser console untuk frontend errors
-3. API documentation di http://localhost:8000/docs
+3. API documentation di http://localhost:8002/docs
 4. README.md untuk informasi lebih detail

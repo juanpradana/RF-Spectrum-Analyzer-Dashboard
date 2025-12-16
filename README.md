@@ -66,10 +66,10 @@ copy .env.example .env
 
 7. Jalankan server:
 ```bash
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8002
 ```
 
-Backend akan berjalan di `http://localhost:8000`
+Backend akan berjalan di `http://localhost:8002`
 
 ### Frontend Setup
 
@@ -93,7 +93,7 @@ copy .env.local.example .env.local
 npm run dev
 ```
 
-Frontend akan berjalan di `http://localhost:3000`
+Frontend akan berjalan di `http://localhost:3002`
 
 ## 📁 Struktur Project
 
@@ -154,13 +154,13 @@ REPORTS_DIR=./reports
 SECRET_KEY=your-secret-key-here
 AUTH_USERNAME=admin
 AUTH_PASSWORD=changeme123
-CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+CORS_ORIGINS=http://localhost:3002,http://127.0.0.1:3002
 ```
 
 ### Frontend (.env.local)
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8002
 ```
 
 ### Database Stasiun Berlisensi
